@@ -2,9 +2,14 @@
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
   "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "publisher": "lntvan166",
   "author": "lntvan166",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lntvan166/cucumber-jump-ext.git"
+  },
+  "homepage": "https://github.com/lntvan166/cucumber-jump-ext#readme",
   "icon": "assets/cucumber.png",
   "license": "MIT",
   "engines": {
@@ -187,7 +192,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "vscode:prepublish": "npm run compile",
-    "package": "vsce package --allow-missing-repository"
+    "package": "vsce package --allow-missing-repository --no-rewrite-relative-links",
+    "package:marketplace": "vsce package --allow-missing-repository --baseContentUrl https://github.com/lntvan166/cucumber-jump-ext/blob/main/ --baseImagesUrl https://github.com/lntvan166/cucumber-jump-ext/raw/main/"
   },
   "devDependencies": {
     "@types/minimatch": "^5.1.2",
