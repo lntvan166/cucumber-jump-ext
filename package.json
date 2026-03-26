@@ -1,0 +1,202 @@
+{
+  "name": "cucumber-jump-ext",
+  "displayName": "Cucumber Jump",
+  "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
+  "version": "0.1.24",
+  "publisher": "lntvan166",
+  "author": "lntvan166",
+  "icon": "assets/cucumber.png",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configurationDefaults": {
+      "[cucumber]": {
+        "editor.gotoLocation.multipleDefinitions": "goto"
+      },
+      "[gherkin]": {
+        "editor.gotoLocation.multipleDefinitions": "goto"
+      },
+      "[feature]": {
+        "editor.gotoLocation.multipleDefinitions": "goto"
+      }
+    },
+    "configuration": {
+      "title": "Cucumber Jump",
+      "properties": {
+        "cucumberJump.projects": {
+          "type": "array",
+          "markdownDescription": "Service packages: feature glob → bdd registry → step implementations. Matched first when resolving from a `.feature` file.",
+          "items": {
+            "type": "object",
+            "required": [
+              "featureGlob",
+              "bddFile",
+              "stepsGlob"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Optional label for documentation."
+              },
+              "featureGlob": {
+                "type": "string",
+                "description": "Glob relative to workspace folder, e.g. services/my-api/feature/**/*.feature. If several entries match the same file, the one whose bddFile lives under the same directory tree as the feature file’s package root (path before /feature/) is chosen."
+              },
+              "bddFile": {
+                "type": "string",
+                "description": "Path or glob relative to workspace folder. If it contains **, the segment after **/ is appended to the feature file’s package root (path before /feature/), e.g. **/testing/bdd.go with repo/my-api/feature/x.feature → repo/my-api/testing/bdd.go."
+              },
+              "stepsGlob": {
+                "type": "string",
+                "description": "Glob for *_steps.go files. Same ** rule as bddFile so searches stay in the same service folder."
+              }
+            }
+          },
+          "default": []
+        },
+        "cucumberJump.includeStepRegistryInDefinition": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When **false** (default), Go to Definition / Ctrl+click from `.feature` steps lists only the `*_steps.go` implementation when it resolves; if not, `bdd.go` is still offered. When **true**, the step registry line in `bdd.go` is also listed. Commands *Go to Step Registry* / *Go to Implementation* are unchanged."
+        },
+        "cucumberJump.codeLensEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show **Implementation** / **Registry** CodeLens on Gherkin step lines in `.feature` files."
+        },
+        "cucumberJump.statusBarHintEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "On `.feature` step lines, show the resolved implementation path in the status bar (debounced). Click opens **Show step resolution** output."
+        },
+        "cucumberJump.devModeDebounceMs": {
+          "type": "number",
+          "default": 200,
+          "minimum": 50,
+          "markdownDescription": "Delay (ms) before syncing the paired pane in **Dev mode** after cursor moves."
+        },
+        "cucumberJump.libraries": {
+          "type": "array",
+          "markdownDescription": "Shared step libraries searched after the matching project (in array order).",
+          "items": {
+            "type": "object",
+            "required": [
+              "featureGlob",
+              "bddFile",
+              "stepsGlob"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "featureGlob": {
+                "type": "string"
+              },
+              "bddFile": {
+                "type": "string"
+              },
+              "stepsGlob": {
+                "type": "string"
+              }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "cucumberJump.goToPrimaryStepTarget",
+        "title": "Cucumber Jump: Go to primary step target"
+      },
+      {
+        "command": "cucumberJump.goToStepRegistry",
+        "title": "Cucumber Jump: Go to Step Registry"
+      },
+      {
+        "command": "cucumberJump.goToImplementation",
+        "title": "Cucumber Jump: Go to Implementation"
+      },
+      {
+        "command": "cucumberJump.peekStepTargets",
+        "title": "Cucumber Jump: Peek step targets (pick list)"
+      },
+      {
+        "command": "cucumberJump.showStepResolution",
+        "title": "Cucumber Jump: Show step resolution"
+      },
+      {
+        "command": "cucumberJump.openDevMode",
+        "title": "Cucumber Jump: Open Dev mode (Go left, feature right)"
+      },
+      {
+        "command": "cucumberJump.toggleDevMode",
+        "title": "Cucumber Jump: Toggle Dev mode",
+        "shortTitle": "Dev mode",
+        "icon": {
+          "light": "assets/cucumber.png",
+          "dark": "assets/cucumber.png"
+        }
+      },
+      {
+        "command": "cucumberJump.closeDevMode",
+        "title": "Cucumber Jump: Close Dev mode"
+      },
+      {
+        "command": "cucumberJump.devModeStatusBarAction",
+        "title": "Cucumber Jump: Dev mode actions…"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "cucumberJump.goToPrimaryStepTarget",
+        "key": "f12",
+        "when": "editorTextFocus && (resourceExtname == 'feature' || resourceExtname == '.feature' || resourceFilename =~ /\\.feature$/i)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "cucumberJump.toggleDevMode",
+          "when": "(resourceExtname == 'feature' || resourceExtname == '.feature' || resourceFilename =~ /\\.feature$/i) && cucumberJump.devModePairedResource != resource",
+          "group": "navigation@100",
+          "icon": {
+            "light": "assets/cucumber.png",
+            "dark": "assets/cucumber.png"
+          }
+        },
+        {
+          "command": "cucumberJump.toggleDevMode",
+          "when": "(resourceExtname == 'feature' || resourceExtname == '.feature' || resourceFilename =~ /\\.feature$/i) && cucumberJump.devModePairedResource == resource",
+          "group": "navigation@100",
+          "icon": "$(close)"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "minimatch": "^9.0.3"
+  }
+}
