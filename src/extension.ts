@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { isBddStepDeclarationPosition } from "./bddParser";
 import { findPackForBddFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
+import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
 import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly } from "./resolver";
 import { registerStepUi } from "./stepUi";
@@ -73,7 +74,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         const primary = locations[0];
-        await vscode.window.showTextDocument(primary.uri, { selection: primary.range, preview: false });
+        await showTextDocumentRevealAtTop(primary.uri, { selection: primary.range, preview: false });
       } finally {
         cts.dispose();
       }
@@ -86,7 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const loc = await resolveRegistryOnly(editor.document, editor.selection.active, cts.token);
         if (loc) {
-          await vscode.window.showTextDocument(loc.uri, { selection: loc.range });
+          await showTextDocumentRevealAtTop(loc.uri, { selection: loc.range });
         }
       } finally {
         cts.dispose();
@@ -97,7 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const loc = await resolveImplementationOnly(editor.document, editor.selection.active, cts.token);
         if (loc) {
-          await vscode.window.showTextDocument(loc.uri, { selection: loc.range });
+          await showTextDocumentRevealAtTop(loc.uri, { selection: loc.range });
         }
       } finally {
         cts.dispose();

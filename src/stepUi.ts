@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { getStepTextAtLineNumber } from "./featureParser";
 import { explainFeatureStepResolution, resolveFromFeature, resolveImplementationOnly } from "./resolver";
 
@@ -75,7 +76,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
           return;
         }
 
-        await vscode.window.showTextDocument(picked.loc.uri, { selection: picked.loc.range, preview: false });
+        await showTextDocumentRevealAtTop(picked.loc.uri, { selection: picked.loc.range, preview: false });
       } finally {
         cts.dispose();
       }
@@ -88,9 +89,8 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
       async (uriStr: string, line: number, which: "impl" | "registry") => {
         const uri = vscode.Uri.parse(uriStr);
         const doc = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(doc);
         const pos = new vscode.Position(line, 0);
-        editor.selection = new vscode.Selection(pos, pos);
+        await showTextDocumentRevealAtTop(doc, { selection: new vscode.Selection(pos, pos) });
 
         if (which === "impl") {
           await vscode.commands.executeCommand("cucumberJump.goToImplementation");

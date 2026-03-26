@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { findPackForBddFile, findPackForStepsFile, getResolutionChainForFeature } from "./config";
+import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { findNearestStepLineIndex } from "./featureParser";
 import { bddUriForEntry } from "./goImplFinder";
 import {
@@ -133,21 +134,21 @@ async function applyDevModeLayout(
   codeRange: vscode.Range,
 ): Promise<void> {
   const codeDoc = await vscode.workspace.openTextDocument(codeUri);
-  await vscode.window.showTextDocument(codeDoc, {
+  await showTextDocumentRevealAtTop(codeDoc, {
     viewColumn: CODE_COLUMN,
     selection: codeRange,
     preview: false,
   });
 
   const featureDoc = await vscode.workspace.openTextDocument(featureUri);
-  await vscode.window.showTextDocument(featureDoc, {
+  await showTextDocumentRevealAtTop(featureDoc, {
     viewColumn: FEATURE_COLUMN,
     selection: featureRange,
     preview: false,
     preserveFocus: true,
   });
 
-  await vscode.window.showTextDocument(codeDoc, {
+  await showTextDocumentRevealAtTop(codeDoc, {
     viewColumn: CODE_COLUMN,
     selection: codeRange,
     preview: false,
@@ -163,7 +164,7 @@ async function revealInPinnedColumn(
   const existing = vscode.window.visibleTextEditors.find((ed) => isSameLocalFile(ed.document.uri, uri));
 
   if (existing) {
-    await vscode.window.showTextDocument(existing.document, {
+    await showTextDocumentRevealAtTop(existing.document, {
       selection: range,
       viewColumn: existing.viewColumn ?? preferredColumn,
       preview: false,
@@ -173,7 +174,7 @@ async function revealInPinnedColumn(
     return;
   }
 
-  await vscode.window.showTextDocument(uri, {
+  await showTextDocumentRevealAtTop(uri, {
     selection: range,
     viewColumn: preferredColumn,
     preview: false,
@@ -465,13 +466,13 @@ async function runDevModeStatusBarAction(): Promise<void> {
 
   if (picked.action === "feature") {
     const fd = await vscode.workspace.openTextDocument(session.featureUri);
-    await vscode.window.showTextDocument(fd, { viewColumn: session.featureViewColumn, preview: false });
+    await showTextDocumentRevealAtTop(fd, { viewColumn: session.featureViewColumn, preview: false });
     notifyPairedFeatureDecoration(session.featureUri);
     return;
   }
 
   const cd = await vscode.workspace.openTextDocument(session.lastCodeUri);
-  await vscode.window.showTextDocument(cd, { viewColumn: session.codeViewColumn, preview: false });
+  await showTextDocumentRevealAtTop(cd, { viewColumn: session.codeViewColumn, preview: false });
 }
 
 export function registerDevMode(context: vscode.ExtensionContext): void {
