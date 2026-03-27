@@ -4,6 +4,14 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.28] - 2026-03-27
+
+### Changed
+
+- **README** demos: **Demo 1** walks through jumping **`.feature` ↔ Go** (with `demo1.gif`); **Demo 2** shows **Dev mode** paired panes—step on the right, Go on the left (with `demo2.gif`).
+
+[0.1.28]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.27...v0.1.28
+
 ## [0.1.27] - 2026-03-27
 
 ### Fixed

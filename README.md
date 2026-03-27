@@ -6,9 +6,21 @@ Install from the **Visual Studio Marketplace** (VS Code) or your editor’s exte
 
 ---
 
-## Demo
+## Demos
 
-![Cucumber Jump — .feature ↔ Go navigation and Dev mode](assets/demo1.gif)
+### Demo 1 — Jump between `.feature` and Go
+
+This shows **bidirectional navigation**: from a Gherkin step to the right Go place, and from Go back to the scenario.
+
+![Demo 1 — navigating from a feature step to Go and back](assets/demo1.gif)
+
+### Demo 2 — Dev mode (paired panes)
+
+**Dev mode** pins a **split layout**: **implementation / registry on the left**, **`.feature` on the right**. When you **move the caret on a step line on the right**, the **left editor** updates to the matching Go code. When you **move inside paired Go** (bdd or steps file), the **right** scrolls to the linked feature line.
+
+Start or stop it from the **cucumber icon** in the **`.feature`** editor title bar, from the command palette (**Toggle Dev mode** / **Open Dev mode**), or via the **DEV · …** status bar item. Full behavior and commands are in **Dev mode** later in this README.
+
+![Demo 2 — Dev mode: step on the right, Go follows on the left](assets/demo2.gif)
 
 ---
 
