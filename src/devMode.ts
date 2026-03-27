@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { findPackForBddFile, findPackForStepsFile, getResolutionChainForFeature } from "./config";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
-import { findNearestStepLineIndex } from "./featureParser";
+import { findNearestStepLineIndex, isFeatureFilePath } from "./featureParser";
 import { bddUriForEntry } from "./goImplFinder";
 import {
   resolveFeatureUsagesFromStepsAtPosition,
@@ -31,10 +31,6 @@ const devModeFileDecorationEmitter = new vscode.EventEmitter<undefined | vscode.
 
 function devModeDebounceMs(): number {
   return vscode.workspace.getConfiguration("cucumberJump").get<number>("devModeDebounceMs") ?? 200;
-}
-
-function isFeatureUri(u: vscode.Uri): boolean {
-  return u.fsPath.toLowerCase().endsWith(".feature");
 }
 
 function featureDisplayName(featureUri: vscode.Uri): string {
@@ -85,12 +81,40 @@ function positionForNearestStep(doc: vscode.TextDocument, cursorLine: number): v
 }
 
 function notifyPairedFeatureDecoration(uri: vscode.Uri | undefined): void {
-  if (uri) {
-    devModeFileDecorationEmitter.fire(uri);
+  devModeFileDecorationEmitter.fire(uri);
+}
+
+/** True if the paired `.feature` still has a tab in Dev mode’s feature column (not only open elsewhere). */
+function isPairedFeatureTabInFeatureColumn(): boolean {
+  if (!session) {
+    return false;
+  }
+
+  for (const group of vscode.window.tabGroups.all) {
+    if (group.viewColumn !== session.featureViewColumn) {
+      continue;
+    }
+
+    for (const tab of group.tabs) {
+      const input = tab.input;
+      if (input instanceof vscode.TabInputText && isSameLocalFile(input.uri, session.featureUri)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/** End Dev mode when the paired feature no longer lives in the pinned feature column (e.g. user closed that group). */
+function clearDevModeIfPairedFeatureLeftPinnedColumn(): void {
+  if (!session || applyingSync) {
     return;
   }
 
-  devModeFileDecorationEmitter.fire(undefined);
+  if (!isPairedFeatureTabInFeatureColumn()) {
+    clearSession();
+  }
 }
 
 async function syncDevModeEditorTitleContexts(): Promise<void> {
@@ -155,18 +179,62 @@ async function applyDevModeLayout(
   });
 }
 
-async function revealInPinnedColumn(
-  uri: vscode.Uri,
-  range: vscode.Range,
-  preferredColumn: vscode.ViewColumn,
-  preserveFocus: boolean,
+async function openDevModeFromGoEditorWithFeature(
+  featureLocation: vscode.Location,
+  goEditor: vscode.TextEditor,
 ): Promise<void> {
-  const existing = vscode.window.visibleTextEditors.find((ed) => isSameLocalFile(ed.document.uri, uri));
+  await applyDevModeLayout(featureLocation.uri, featureLocation.range, goEditor.document.uri, goEditor.selection);
+  startSession(featureLocation.uri, {
+    codeViewColumn: CODE_COLUMN,
+    featureViewColumn: FEATURE_COLUMN,
+    lastCodeUri: goEditor.document.uri,
+  });
+}
 
-  if (existing) {
-    await showTextDocumentRevealAtTop(existing.document, {
+async function revealCodeInSession(uri: vscode.Uri, range: vscode.Range, preserveFocus: boolean): Promise<void> {
+  if (!session) {
+    return;
+  }
+
+  const col = session.codeViewColumn;
+  const existingInPinned = vscode.window.visibleTextEditors.find(
+    (ed) => isSameLocalFile(ed.document.uri, uri) && ed.viewColumn === col,
+  );
+
+  if (existingInPinned) {
+    await showTextDocumentRevealAtTop(existingInPinned.document, {
       selection: range,
-      viewColumn: existing.viewColumn ?? preferredColumn,
+      viewColumn: col,
+      preview: false,
+      preserveFocus,
+    });
+    session.lastCodeUri = uri;
+    return;
+  }
+
+  await showTextDocumentRevealAtTop(uri, {
+    selection: range,
+    viewColumn: col,
+    preview: false,
+    preserveFocus,
+  });
+  session.lastCodeUri = uri;
+}
+
+async function revealFeatureInSession(uri: vscode.Uri, range: vscode.Range, preserveFocus: boolean): Promise<void> {
+  if (!session) {
+    return;
+  }
+
+  const col = session.featureViewColumn;
+  const existingInPinned = vscode.window.visibleTextEditors.find(
+    (ed) => isSameLocalFile(ed.document.uri, uri) && ed.viewColumn === col,
+  );
+
+  if (existingInPinned) {
+    await showTextDocumentRevealAtTop(existingInPinned.document, {
+      selection: range,
+      viewColumn: col,
       preview: false,
       preserveFocus,
     });
@@ -176,27 +244,10 @@ async function revealInPinnedColumn(
 
   await showTextDocumentRevealAtTop(uri, {
     selection: range,
-    viewColumn: preferredColumn,
+    viewColumn: col,
     preview: false,
     preserveFocus,
   });
-}
-
-async function revealCodeInSession(uri: vscode.Uri, range: vscode.Range, preserveFocus: boolean): Promise<void> {
-  if (!session) {
-    return;
-  }
-
-  await revealInPinnedColumn(uri, range, session.codeViewColumn, preserveFocus);
-  session.lastCodeUri = uri;
-}
-
-async function revealFeatureInSession(uri: vscode.Uri, range: vscode.Range, preserveFocus: boolean): Promise<void> {
-  if (!session) {
-    return;
-  }
-
-  await revealInPinnedColumn(uri, range, session.featureViewColumn, preserveFocus);
 }
 
 async function syncFromEditor(editor: vscode.TextEditor | undefined): Promise<void> {
@@ -221,7 +272,7 @@ async function syncFromEditor(editor: vscode.TextEditor | undefined): Promise<vo
         loc = await resolveRegistryOnly(doc, stepPos, cts.token);
       }
 
-      if (!loc) {
+      if (!loc || !session) {
         return;
       }
 
@@ -241,29 +292,41 @@ async function syncFromEditor(editor: vscode.TextEditor | undefined): Promise<vo
     }
 
     let locs: vscode.Location[] | undefined;
+    const hasBddPack = Boolean(findPackForBddFile(doc.uri));
 
-    if (findPackForBddFile(doc.uri)) {
+    if (hasBddPack) {
       locs = await resolveFromBdd(doc, pos, cts.token);
     }
 
-    if (!findPackForBddFile(doc.uri) && findPackForStepsFile(doc.uri)) {
+    if (!hasBddPack && findPackForStepsFile(doc.uri)) {
       locs = await resolveFeatureUsagesFromStepsAtPosition(doc, pos, cts.token);
     }
+
+    if (!session) {
+      return;
+    }
+
+    const activeSession = session;
 
     if (!locs || locs.length === 0) {
       return;
     }
 
-    const pick = locs.find((l) => isSameLocalFile(l.uri, session!.featureUri));
+    const pick = locs.find((l) => isSameLocalFile(l.uri, activeSession.featureUri));
 
     if (!pick) {
+      return;
+    }
+
+    if (!isPairedFeatureTabInFeatureColumn()) {
+      clearSession();
       return;
     }
 
     applyingSync = true;
 
     try {
-      await revealFeatureInSession(session.featureUri, pick.range, true);
+      await revealFeatureInSession(activeSession.featureUri, pick.range, true);
     } finally {
       applyingSync = false;
     }
@@ -300,6 +363,34 @@ function startSession(
     }),
   );
 
+  disposables.push(
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      if (!session) {
+        return;
+      }
+
+      if (!isFeatureFilePath(doc.uri.fsPath)) {
+        return;
+      }
+
+      if (!isSameLocalFile(doc.uri, session.featureUri)) {
+        return;
+      }
+
+      queueMicrotask(() => clearSession());
+    }),
+  );
+
+  disposables.push(
+    vscode.window.tabGroups.onDidChangeTabs(() => {
+      if (!session || applyingSync) {
+        return;
+      }
+
+      queueMicrotask(() => clearDevModeIfPairedFeatureLeftPinnedColumn());
+    }),
+  );
+
   session = {
     featureUri,
     codeViewColumn: layout.codeViewColumn,
@@ -314,7 +405,7 @@ function startSession(
 
 export async function toggleDevMode(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
-  if (!editor || !isFeatureUri(editor.document.uri)) {
+  if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
     await vscode.window.showInformationMessage("Cucumber Jump: open a .feature file first.");
     return;
   }
@@ -339,7 +430,7 @@ export async function openDevMode(): Promise<void> {
   const cts = new vscode.CancellationTokenSource();
 
   try {
-    if (isFeatureUri(doc.uri)) {
+    if (isFeatureFilePath(doc.uri.fsPath)) {
       const chain = getResolutionChainForFeature(doc.uri);
       if (chain.length === 0) {
         await vscode.window.showInformationMessage(
@@ -388,34 +479,20 @@ export async function openDevMode(): Promise<void> {
       return;
     }
 
-    if (findPackForBddFile(doc.uri)) {
-      const locs = await resolveFromBdd(doc, editor.selection.active, cts.token);
+    const hasBddPack = Boolean(findPackForBddFile(doc.uri));
+    let goDevLocs: vscode.Location[] | undefined;
 
-      if (locs && locs.length > 0) {
-        const pick = locs[0];
-        await applyDevModeLayout(pick.uri, pick.range, doc.uri, editor.selection);
-        startSession(pick.uri, {
-          codeViewColumn: CODE_COLUMN,
-          featureViewColumn: FEATURE_COLUMN,
-          lastCodeUri: doc.uri,
-        });
-        return;
-      }
+    if (hasBddPack) {
+      goDevLocs = await resolveFromBdd(doc, editor.selection.active, cts.token);
     }
 
-    if (findPackForStepsFile(doc.uri)) {
-      const locs = await resolveFeatureUsagesFromStepsAtPosition(doc, editor.selection.active, cts.token);
+    if (!hasBddPack && findPackForStepsFile(doc.uri)) {
+      goDevLocs = await resolveFeatureUsagesFromStepsAtPosition(doc, editor.selection.active, cts.token);
+    }
 
-      if (locs && locs.length > 0) {
-        const pick = locs[0];
-        await applyDevModeLayout(pick.uri, pick.range, doc.uri, editor.selection);
-        startSession(pick.uri, {
-          codeViewColumn: CODE_COLUMN,
-          featureViewColumn: FEATURE_COLUMN,
-          lastCodeUri: doc.uri,
-        });
-        return;
-      }
+    if (goDevLocs && goDevLocs.length > 0) {
+      await openDevModeFromGoEditorWithFeature(goDevLocs[0], editor);
+      return;
     }
 
     await vscode.window.showInformationMessage(
@@ -452,7 +529,8 @@ async function runDevModeStatusBarAction(): Promise<void> {
   ];
 
   const picked = await vscode.window.showQuickPick(items, {
-    placeHolder: "Cucumber Jump · Dev mode",
+    title: "Cucumber Jump · Dev mode",
+    placeHolder: "Choose an action",
   });
 
   if (!picked) {

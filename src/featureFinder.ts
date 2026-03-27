@@ -42,11 +42,12 @@ export async function findFeatureUsages(
         break;
       }
 
-      const doc = await vscode.workspace.openTextDocument(file);
-      const lineCount = doc.lineCount;
+      const bytes = await vscode.workspace.fs.readFile(file);
+      const text = new TextDecoder("utf-8").decode(bytes);
+      const lines = text.split(/\r?\n/);
 
-      for (let i = 0; i < lineCount; i++) {
-        const lineText = doc.lineAt(i).text;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
         const stepBody = parseStepLine(lineText);
         if (!stepBody) {
           continue;

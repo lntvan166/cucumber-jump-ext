@@ -12,6 +12,7 @@ export async function showTextDocumentRevealAtTop(
   document: vscode.TextDocument | vscode.Uri,
   options: vscode.TextDocumentShowOptions,
 ): Promise<vscode.TextEditor> {
+  // Two calls are required so TypeScript picks the correct `showTextDocument` overload.
   const editor = isTextDocument(document)
     ? await vscode.window.showTextDocument(document, options)
     : await vscode.window.showTextDocument(document, options);

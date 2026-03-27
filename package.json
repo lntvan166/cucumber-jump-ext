@@ -2,7 +2,7 @@
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
   "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "publisher": "lntvan166",
   "author": "lntvan166",
   "repository": {
@@ -19,6 +19,11 @@
     "Other"
   ],
   "activationEvents": [
+    "onLanguage:go",
+    "onLanguage:gherkin",
+    "onLanguage:cucumber",
+    "onLanguage:feature",
+    "workspaceContains:**/*.feature",
     "onStartupFinished"
   ],
   "main": "./out/extension.js",

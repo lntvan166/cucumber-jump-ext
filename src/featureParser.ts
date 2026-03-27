@@ -1,5 +1,10 @@
 const stepKeywordRegex = /^\s*(Given|When|Then|And|But)\s+(.+)\s*$/;
 
+/** True if `fsPath` is a `.feature` file (case-insensitive extension). */
+export function isFeatureFilePath(fsPath: string): boolean {
+  return fsPath.toLowerCase().endsWith(".feature");
+}
+
 export function normalizeStepText(raw: string): string {
   const trimmed = raw.trim();
   const kw = trimmed.match(stepKeywordRegex);

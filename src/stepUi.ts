@@ -1,13 +1,9 @@
 import * as vscode from "vscode";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
-import { getStepTextAtLineNumber } from "./featureParser";
+import { getStepTextAtLineNumber, isFeatureFilePath } from "./featureParser";
 import { explainFeatureStepResolution, resolveFromFeature, resolveImplementationOnly } from "./resolver";
 
 type TargetPickItem = vscode.QuickPickItem & { loc: vscode.Location };
-
-function isFeatureDocumentPath(fsPath: string): boolean {
-  return fsPath.toLowerCase().endsWith(".feature");
-}
 
 function stepTargetKindLabel(uri: vscode.Uri): string {
   const p = uri.fsPath.toLowerCase();
@@ -25,7 +21,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("cucumberJump.showStepResolution", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isFeatureDocumentPath(editor.document.uri.fsPath)) {
+      if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
         await vscode.window.showInformationMessage("Open a .feature file and put the cursor on a step line.");
         return;
       }
@@ -45,7 +41,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("cucumberJump.peekStepTargets", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isFeatureDocumentPath(editor.document.uri.fsPath)) {
+      if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
         await vscode.window.showInformationMessage("Open a .feature file and put the cursor on a step line.");
         return;
       }
@@ -69,7 +65,8 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
         });
 
         const picked = await vscode.window.showQuickPick(items, {
-          placeHolder: "Pick a target (Cucumber Jump only — no merged definitions)",
+          title: "Cucumber Jump",
+          placeHolder: "Pick a target (extension-only list)",
         });
 
         if (!picked) {
@@ -151,71 +148,109 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   status.command = "cucumberJump.showStepResolution";
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let statusRefreshGeneration = 0;
 
   const refreshStatus = async (): Promise<void> => {
+    const generation = ++statusRefreshGeneration;
     const enabled = vscode.workspace.getConfiguration("cucumberJump").get<boolean>("statusBarHintEnabled") ?? false;
     const editor = vscode.window.activeTextEditor;
 
-    if (!enabled || !editor || !isFeatureDocumentPath(editor.document.uri.fsPath)) {
-      status.hide();
+    if (!enabled || !editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
+      if (generation === statusRefreshGeneration) {
+        status.hide();
+      }
       return;
     }
 
     const stepText = getStepTextAtLineNumber(editor.document.getText(), editor.selection.active.line);
     if (!stepText) {
-      status.hide();
+      if (generation === statusRefreshGeneration) {
+        status.hide();
+      }
       return;
     }
 
     const cts = new vscode.CancellationTokenSource();
     try {
       const impl = await resolveImplementationOnly(editor.document, editor.selection.active, cts.token);
+      if (generation !== statusRefreshGeneration || cts.token.isCancellationRequested) {
+        return;
+      }
+
       if (impl) {
         const rel = vscode.workspace.asRelativePath(impl.uri);
         status.text = `$(debug-breakpoint-log) ${rel}:${impl.range.start.line + 1}`;
-        status.tooltip = "Cucumber Jump: primary implementation — click for full resolution log";
+        status.tooltip = new vscode.MarkdownString(
+          "Cucumber Jump: **primary implementation** — click for the full resolution log.\n\nSame line as the CodeLens / Go to Implementation target.",
+          true,
+        );
         status.show();
         return;
       }
 
       status.text = "$(question) Cucumber Jump: no impl";
-      status.tooltip = "Click for step resolution details";
+      status.tooltip = new vscode.MarkdownString(
+        "No `*_steps.go` match for this step yet — **click** for the step-by-step resolution log.",
+        true,
+      );
       status.show();
     } finally {
       cts.dispose();
     }
   };
 
+  const scheduleStatusRefresh = (): void => {
+    if (debounceTimer !== undefined) {
+      clearTimeout(debounceTimer);
+    }
+
+    debounceTimer = setTimeout(() => {
+      debounceTimer = undefined;
+      void refreshStatus();
+    }, 300);
+  };
+
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      if (!isFeatureDocumentPath(e.textEditor.document.uri.fsPath)) {
+      if (!isFeatureFilePath(e.textEditor.document.uri.fsPath)) {
         status.hide();
         return;
       }
 
-      if (debounceTimer !== undefined) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        void refreshStatus();
-      }, 300);
+      scheduleStatusRefresh();
     }),
   );
 
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(() => {
-      void refreshStatus();
+    vscode.window.onDidChangeActiveTextEditor((e) => {
+      if (!e || !isFeatureFilePath(e.document.uri.fsPath)) {
+        if (debounceTimer !== undefined) {
+          clearTimeout(debounceTimer);
+          debounceTimer = undefined;
+        }
+        statusRefreshGeneration += 1;
+        status.hide();
+        return;
+      }
+
+      scheduleStatusRefresh();
     }),
   );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("cucumberJump.statusBarHintEnabled")) {
-        void refreshStatus();
+        scheduleStatusRefresh();
       }
     }),
   );
 
-  context.subscriptions.push(status);
+  context.subscriptions.push(status, {
+    dispose: () => {
+      if (debounceTimer !== undefined) {
+        clearTimeout(debounceTimer);
+      }
+      statusRefreshGeneration += 1;
+    },
+  });
 }

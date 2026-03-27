@@ -4,23 +4,41 @@ import { findPackForBddFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
+import { isFeatureFilePath } from "./featureParser";
 import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly } from "./resolver";
 import { registerStepUi } from "./stepUi";
+
+/** Selector for `.feature` definition / implementation (editor Ctrl+click Go to Definition). */
+const featureStepDocumentSelector: vscode.DocumentSelector = [
+  { scheme: "file", pattern: "**/*.feature" },
+  { scheme: "file", pattern: "**/*.FEATURE" },
+  { scheme: "file", language: "gherkin" },
+  { scheme: "file", language: "cucumber" },
+  { scheme: "file", language: "feature" },
+];
+
+function logDefinitionProviderError(err: unknown): void {
+  console.error("Cucumber Jump: provideDefinition failed", err);
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   registerStepUi(context);
   registerDevMode(context);
   const definitionProvider: vscode.DefinitionProvider = {
     provideDefinition: async (document, position, token) => {
-      if (isFeatureDocument(document)) {
-        return resolveFromFeature(document, position, token);
-      }
-
-      if (document.languageId === "go" && findPackForBddFile(document.uri)) {
-        const text = document.getText();
-        if (isBddStepDeclarationPosition(text, position.line, position.character)) {
-          return resolveFromBdd(document, position, token);
+      try {
+        if (isFeatureDocument(document)) {
+          return await resolveFromFeature(document, position, token);
         }
+
+        if (document.languageId === "go" && findPackForBddFile(document.uri)) {
+          const text = document.getText();
+          if (isBddStepDeclarationPosition(text, position.line, position.character)) {
+            return await resolveFromBdd(document, position, token);
+          }
+        }
+      } catch (err) {
+        logDefinitionProviderError(err);
       }
 
       return undefined;
@@ -29,33 +47,43 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const bddStepReferenceProvider: vscode.ReferenceProvider = {
     provideReferences: async (document, position, _context, token) => {
-      if (document.languageId !== "go") {
+      try {
+        if (document.languageId !== "go") {
+          return undefined;
+        }
+
+        if (!findPackForBddFile(document.uri)) {
+          return undefined;
+        }
+
+        return await resolveFromBdd(document, position, token);
+      } catch (err) {
+        logDefinitionProviderError(err);
         return undefined;
       }
-
-      if (!findPackForBddFile(document.uri)) {
-        return undefined;
-      }
-
-      return resolveFromBdd(document, position, token);
     },
   };
 
   const implementationProvider: vscode.ImplementationProvider = {
-    provideImplementation: (document, position, token) => {
+    provideImplementation: async (document, position, token) => {
       if (!isFeatureDocument(document)) {
         return undefined;
       }
 
-      return resolveFromFeature(document, position, token);
+      try {
+        return await resolveFromFeature(document, position, token);
+      } catch (err) {
+        logDefinitionProviderError(err);
+        return undefined;
+      }
     },
   };
 
   context.subscriptions.push(
-    vscode.languages.registerDefinitionProvider({ scheme: "file", pattern: "**/*.feature" }, definitionProvider),
+    vscode.languages.registerDefinitionProvider(featureStepDocumentSelector, definitionProvider),
     vscode.languages.registerDefinitionProvider({ language: "go", scheme: "file" }, definitionProvider),
     vscode.languages.registerReferenceProvider({ language: "go", scheme: "file" }, bddStepReferenceProvider),
-    vscode.languages.registerImplementationProvider({ scheme: "file", pattern: "**/*.feature" }, implementationProvider),
+    vscode.languages.registerImplementationProvider(featureStepDocumentSelector, implementationProvider),
   );
 
   context.subscriptions.push(
@@ -134,5 +162,5 @@ export function deactivate(): void {
 }
 
 function isFeatureDocument(document: vscode.TextDocument): boolean {
-  return document.uri.fsPath.toLowerCase().endsWith(".feature");
+  return isFeatureFilePath(document.uri.fsPath);
 }
