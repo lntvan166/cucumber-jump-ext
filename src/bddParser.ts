@@ -12,6 +12,7 @@ export type BddStepBlock = {
 
 const stepKeyRegex = /`([^`]+)`\s*:\s*func/;
 const lineCommentRegex = /^\s*\/\/\s*(.+?)\s*$/;
+const fullLineDoubleSlashCommentRegex = /^\s*\/\//;
 const returnStateRegex = /return\s+([a-zA-Z0-9_]+)\s*\(\s*state/;
 
 export function parseBddFile(content: string): BddStepBlock[] {
@@ -42,10 +43,15 @@ export function parseBddFile(content: string): BddStepBlock[] {
 
     let implFunctionName: string | undefined;
     let implLine: number | undefined;
-    const searchEnd = Math.min(i + 25, lines.length);
+    const blockEndLine = findBlockEndLine(lines, i);
 
-    for (let j = i + 1; j < searchEnd; j++) {
-      const ret = lines[j].match(returnStateRegex);
+    for (let j = i + 1; j <= blockEndLine; j++) {
+      const bodyLine = lines[j];
+      if (fullLineDoubleSlashCommentRegex.test(bodyLine)) {
+        continue;
+      }
+
+      const ret = bodyLine.match(returnStateRegex);
       if (ret) {
         implFunctionName = ret[1];
         implLine = j;

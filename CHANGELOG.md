@@ -4,6 +4,23 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.29] - 2026-03-27
+
+### Fixed
+
+- **From `.feature`**: If a step is implemented **inline** in `bdd.go` (anonymous `func` only `return nil`, real call commented with `//`), navigation no longer pretends the handler is still the old `return Name(state, …)` line. **Go to Definition**, **Go to Implementation**, and **Dev mode** sync fall through to the **`bdd.go` map entry** (regex line) so you always land on real code.
+- Step map parsing **ignores full-line `//` comments** when looking for `return helper(state` delegation to `*_steps.go`, and only scans **within the current map entry’s `func { … }` block** so the next step’s `return …(state` is never mistaken for this one (that regression could make navigation jump nowhere or to the wrong place).
+- **Ctrl+click / Go to Definition** stays aligned with **F12**: document selectors use **explicit `scheme`** (`file` and `vscode-remote`) for `.feature` globs and Gherkin language IDs, and for **Go** bdd maps (`go` + `file` / `vscode-remote`). Broad pattern-only or bare `language` filters regressed Ctrl+click in some Cursor builds.
+- **Remote SSH / WSL / dev containers**: same explicit `vscode-remote` registration as local `file` workspaces.
+- If **dedupe** would drop every definition target (URI edge case), resolutions are still returned instead of empty.
+- **`.feature` detection** for navigation uses `Uri.path` when `fsPath` is empty.
+
+### Changed
+
+- README: short note on **inline `bdd.go` map bodies** and fallback to the registry line.
+
+[0.1.29]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.28...v0.1.29
+
 ## [0.1.28] - 2026-03-27
 
 ### Changed

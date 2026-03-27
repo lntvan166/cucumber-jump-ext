@@ -5,6 +5,15 @@ export function isFeatureFilePath(fsPath: string): boolean {
   return fsPath.toLowerCase().endsWith(".feature");
 }
 
+/** True for `.feature` paths; uses {@link Uri.path} when `fsPath` is empty (e.g. some virtual URIs). */
+export function isFeatureUri(uri: { fsPath: string; path: string }): boolean {
+  if (isFeatureFilePath(uri.fsPath)) {
+    return true;
+  }
+
+  return uri.path.toLowerCase().endsWith(".feature");
+}
+
 export function normalizeStepText(raw: string): string {
   const trimmed = raw.trim();
   const kw = trimmed.match(stepKeywordRegex);

@@ -4,17 +4,31 @@ import { findPackForBddFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
-import { isFeatureFilePath } from "./featureParser";
+import { isFeatureUri } from "./featureParser";
 import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly } from "./resolver";
 import { registerStepUi } from "./stepUi";
 
-/** Selector for `.feature` definition / implementation (editor Ctrl+click Go to Definition). */
+/**
+ * Selectors for `.feature` Go to Definition (Ctrl+click). Prefer explicit `scheme` per filter:
+ * pattern-only / bare `language` selectors have behaved inconsistently in some Cursor builds.
+ */
 const featureStepDocumentSelector: vscode.DocumentSelector = [
   { scheme: "file", pattern: "**/*.feature" },
   { scheme: "file", pattern: "**/*.FEATURE" },
+  { scheme: "vscode-remote", pattern: "**/*.feature" },
+  { scheme: "vscode-remote", pattern: "**/*.FEATURE" },
   { scheme: "file", language: "gherkin" },
   { scheme: "file", language: "cucumber" },
   { scheme: "file", language: "feature" },
+  { scheme: "vscode-remote", language: "gherkin" },
+  { scheme: "vscode-remote", language: "cucumber" },
+  { scheme: "vscode-remote", language: "feature" },
+];
+
+/** Bdd map files: scoped `scheme` so registration does not collide broadly with all Go documents. */
+const goBddDocumentSelector: vscode.DocumentSelector = [
+  { language: "go", scheme: "file" },
+  { language: "go", scheme: "vscode-remote" },
 ];
 
 function logDefinitionProviderError(err: unknown): void {
@@ -81,8 +95,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.languages.registerDefinitionProvider(featureStepDocumentSelector, definitionProvider),
-    vscode.languages.registerDefinitionProvider({ language: "go", scheme: "file" }, definitionProvider),
-    vscode.languages.registerReferenceProvider({ language: "go", scheme: "file" }, bddStepReferenceProvider),
+    vscode.languages.registerDefinitionProvider(goBddDocumentSelector, definitionProvider),
+    vscode.languages.registerReferenceProvider(goBddDocumentSelector, bddStepReferenceProvider),
     vscode.languages.registerImplementationProvider(featureStepDocumentSelector, implementationProvider),
   );
 
@@ -162,5 +176,5 @@ export function deactivate(): void {
 }
 
 function isFeatureDocument(document: vscode.TextDocument): boolean {
-  return isFeatureFilePath(document.uri.fsPath);
+  return isFeatureUri(document.uri);
 }

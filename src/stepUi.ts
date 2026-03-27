@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
-import { getStepTextAtLineNumber, isFeatureFilePath } from "./featureParser";
+import { getStepTextAtLineNumber, isFeatureUri } from "./featureParser";
 import { explainFeatureStepResolution, resolveFromFeature, resolveImplementationOnly } from "./resolver";
 
 type TargetPickItem = vscode.QuickPickItem & { loc: vscode.Location };
@@ -21,7 +21,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("cucumberJump.showStepResolution", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
+      if (!editor || !isFeatureUri(editor.document.uri)) {
         await vscode.window.showInformationMessage("Open a .feature file and put the cursor on a step line.");
         return;
       }
@@ -41,7 +41,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("cucumberJump.peekStepTargets", async () => {
       const editor = vscode.window.activeTextEditor;
-      if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
+      if (!editor || !isFeatureUri(editor.document.uri)) {
         await vscode.window.showInformationMessage("Open a .feature file and put the cursor on a step line.");
         return;
       }
@@ -100,7 +100,13 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider({ scheme: "file", pattern: "**/*.feature" }, {
+    vscode.languages.registerCodeLensProvider(
+      [
+        { scheme: "file", pattern: "**/*.feature" },
+        { scheme: "vscode-remote", pattern: "**/*.feature" },
+        { pattern: "**/*.feature" },
+      ],
+      {
       provideCodeLenses: async (document, token) => {
         const enabled = vscode.workspace.getConfiguration("cucumberJump").get<boolean>("codeLensEnabled") ?? false;
         if (!enabled) {
@@ -142,7 +148,8 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
 
         return lenses;
       },
-    }),
+    },
+    ),
   );
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -155,7 +162,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
     const enabled = vscode.workspace.getConfiguration("cucumberJump").get<boolean>("statusBarHintEnabled") ?? false;
     const editor = vscode.window.activeTextEditor;
 
-    if (!enabled || !editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
+    if (!enabled || !editor || !isFeatureUri(editor.document.uri)) {
       if (generation === statusRefreshGeneration) {
         status.hide();
       }
@@ -212,7 +219,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      if (!isFeatureFilePath(e.textEditor.document.uri.fsPath)) {
+      if (!isFeatureUri(e.textEditor.document.uri)) {
         status.hide();
         return;
       }
@@ -223,7 +230,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => {
-      if (!e || !isFeatureFilePath(e.document.uri.fsPath)) {
+      if (!e || !isFeatureUri(e.document.uri)) {
         if (debounceTimer !== undefined) {
           clearTimeout(debounceTimer);
           debounceTimer = undefined;

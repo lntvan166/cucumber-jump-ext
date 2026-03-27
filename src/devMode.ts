@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { findPackForBddFile, findPackForStepsFile, getResolutionChainForFeature } from "./config";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
-import { findNearestStepLineIndex, isFeatureFilePath } from "./featureParser";
+import { findNearestStepLineIndex, isFeatureUri } from "./featureParser";
 import { bddUriForEntry } from "./goImplFinder";
 import {
   resolveFeatureUsagesFromStepsAtPosition,
@@ -369,7 +369,7 @@ function startSession(
         return;
       }
 
-      if (!isFeatureFilePath(doc.uri.fsPath)) {
+      if (!isFeatureUri(doc.uri)) {
         return;
       }
 
@@ -405,7 +405,7 @@ function startSession(
 
 export async function toggleDevMode(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
-  if (!editor || !isFeatureFilePath(editor.document.uri.fsPath)) {
+  if (!editor || !isFeatureUri(editor.document.uri)) {
     await vscode.window.showInformationMessage("Cucumber Jump: open a .feature file first.");
     return;
   }
@@ -430,7 +430,7 @@ export async function openDevMode(): Promise<void> {
   const cts = new vscode.CancellationTokenSource();
 
   try {
-    if (isFeatureFilePath(doc.uri.fsPath)) {
+    if (isFeatureUri(doc.uri)) {
       const chain = getResolutionChainForFeature(doc.uri);
       if (chain.length === 0) {
         await vscode.window.showInformationMessage(

@@ -97,7 +97,8 @@ export async function resolveFromFeature(
 
     const filtered = dedupeDefinitionsOutsideSourceDoc(document, locations);
     if (filtered.length === 0) {
-      return undefined;
+      // Dedupe should not drop every target; if it does (URI edge case), still return resolutions.
+      return locations;
     }
 
     return filtered;
@@ -158,9 +159,11 @@ export async function explainFeatureStepResolution(
         out.push(`  Implementation → ${vscode.workspace.asRelativePath(impl.uri)}:${impl.range.start.line + 1}`);
       } else {
         out.push("  Implementation: not found (stepsGlob / function name).");
+        out.push(`  Fallback: **Go to Implementation** opens this registry line (${block.regexLine + 1}).`);
       }
     } else {
-      out.push("  No return <func>(state) found after this map entry.");
+      out.push("  No active `return handler(state, …)` in the map body (inline func or delegation only in comments).");
+      out.push(`  **Go to Implementation** opens the registry line (${block.regexLine + 1}).`);
     }
 
     return out;
@@ -306,11 +309,18 @@ export async function resolveImplementationOnly(
     }
 
     const block = blocks.find((b) => blockMatchesStep(b, stepText, normalized));
-    if (!block || !block.implFunctionName) {
+    if (!block) {
       continue;
     }
 
-    return findImplementationLocation(entry, block.implFunctionName, token, document.uri);
+    if (block.implFunctionName) {
+      const impl = await findImplementationLocation(entry, block.implFunctionName, token, document.uri);
+      if (impl) {
+        return impl;
+      }
+    }
+
+    return bddLocationForBlock(bddUri, block);
   }
 
   return undefined;

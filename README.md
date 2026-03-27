@@ -134,6 +134,7 @@ While Dev mode is on, a **status bar** item shows **`DEV · <file.feature>`**; *
 
 ## Other navigation (short)
 
+- **Inline steps in `bdd.go`**: If the map uses an anonymous `func` with only `return nil` (and the real `return myHandler(state, …)` is commented out), there is no `*_steps.go` target. **Go to Definition** / **Go to Implementation** then open the **step line in `bdd.go`** (the regex key) instead of doing nothing.
 - **F12** on a `.feature` step (when the keybinding applies): **Go to primary step target** — jumps to the main Go target without relying on merged definition lists.
 - **Cucumber Jump: Peek step targets** — pick list of this extension’s targets only.
 - **`bdd.go`**: **Go to Definition** / **Find All References** in supported positions jumps to or lists **`.feature`** usages (per configuration).
