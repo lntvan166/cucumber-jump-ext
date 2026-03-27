@@ -4,6 +4,20 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.30] - 2026-03-27
+
+### Added
+
+- **README**: new **`## Quick setup with an AI assistant`** section (after **Demos**) with a copy-paste prompt for IDE AI chats to analyze the repo and propose `cucumberJump` / `.vscode/settings.json` configuration.
+- **`docs/ai-setup-prompt.txt`**: same prompt as **Open raw** for easy copy; collapsible block in the README mirrors it.
+
+### Changed
+
+- **README** (settings docs): note under **Wildcards** when **registry and implementations share one file** (`stepsGlob` must include that file or a broader glob).
+- **AI setup prompt** (README + `docs/ai-setup-prompt.txt`): prefer **one** `projects` entry with `**` when layouts match; keep **`includeStepRegistryInDefinition`** at **false** unless the user asks otherwise; **glob pitfalls**—avoid `prefix-*` in nested trees, **prefer `**`** from a stable parent (also for **`cucumber.glue`**); generic monorepo examples (no vendor-specific paths).
+
+[0.1.30]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.29...v0.1.30
+
 ## [0.1.29] - 2026-03-27
 
 ### Fixed

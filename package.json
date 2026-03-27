@@ -2,7 +2,7 @@
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
   "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "publisher": "lntvan166",
   "author": "lntvan166",
   "repository": {

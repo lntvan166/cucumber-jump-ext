@@ -24,6 +24,45 @@ Start or stop it from the **cucumber icon** in the **`.feature`** editor title b
 
 ---
 
+## Quick setup with an AI assistant
+
+Cucumber Jump works in **VS Code**, **Cursor**, and other VS Code–based editors. If your editor has an **AI chat** (e.g. GitHub Copilot Chat, Cursor, Codeium, or JetBrains AI in VS Code), you can paste a setup prompt so the assistant inspects your tree and proposes `cucumberJump` entries for `.vscode/settings.json`.
+
+1. Open your project as the **workspace root** so paths resolve correctly.
+2. Copy the prompt: **[Open raw file](https://github.com/lntvan166/cucumber-jump-ext/raw/main/docs/ai-setup-prompt.txt)** (select all → copy), or expand the block below.
+3. Paste into your AI chat and ask it to merge the settings (or show a diff first). **Review** the JSON before saving.
+
+<details>
+<summary><strong>Setup prompt</strong> (expand to copy) — also available as <a href="https://github.com/lntvan166/cucumber-jump-ext/raw/main/docs/ai-setup-prompt.txt">raw</a></summary>
+
+```text
+You are helping configure Cucumber Jump (VS Code / Cursor extension, publisher lntvan166) for this workspace.
+
+Context: The workspace root is opened in a VS Code–compatible editor. All paths in cucumberJump settings are relative to that workspace folder.
+
+Tasks:
+1. Discover all *.feature files and infer each BDD "package root" (the directory segment before /feature/ in the path, or the folder that groups one BDD module).
+2. For each distinct layout, locate the step registry (bdd.go, *_bdd.go, or similar: file with godog-style StepMap / regex → handler wiring) and step implementation files (typically *_steps.go).
+3. Monorepo / many services: if every module uses the **same relative layout** (e.g. each package root has feature/ + testing/bdd.go + testing/*_steps.go under one common parent), prefer **one** cucumberJump.projects entry with ** in featureGlob, bddFile, and stepsGlob (see README "Wildcards in bddFile and stepsGlob"). Do **not** emit one projects object per service in that case—it bloats the array. Add **multiple** projects entries only when layouts genuinely differ in ways a single ** pattern cannot express.
+4. Add cucumberJump.libraries entries only for shared/common features and shared registry + steps. Libraries are searched after the matching project, in array order.
+5. Merge cucumberJump.projects, cucumberJump.libraries, and optional keys (statusBarHintEnabled, etc.) into .vscode/settings.json. Preserve every existing unrelated setting. Create .vscode/settings.json if missing. For cucumberJump.includeStepRegistryInDefinition: use **false** or omit the key (extension default is false). Set **true** only if the user explicitly wants the bdd registry line included in Go to Definition alongside the implementation—do not default it to true.
+6. If the official Cucumber extension is used, suggest cucumber.glue globs that include the same implementation paths so its language server does not conflict with Cucumber Jump on step lines.
+7. Single-file layout: if handler funcs live in the same file as the registry (no *_steps.go), set bddFile to that file and set stepsGlob to a glob that includes that file (same path, or a broader folder glob such as my/module/testing/*.go). A pattern like *_steps.go alone does not match bdd.go.
+8. Multi-root workspaces: if multiple folders are opened, settings may need per-folder .vscode/settings.json or the correct scope for each root.
+9. After editing, explain how to verify: open a .feature, put the caret on a step line, press F12 (Go to primary step target) or Go to Definition; use the command "Cucumber Jump: Show step resolution" if something fails.
+10. Glob pitfalls (not regex): do **not** rely on `prefix-*` style globs (single `*` for one folder name) in the middle of paths for nested monorepos—they often **fail to match** in VS Code workspace globs. **Prefer `**` from a stable parent** (e.g. `my-root/**/feature/**/*.feature`, `my-root/**/testing/bdd.go`). If you must anchor a literal prefix before arbitrary nested paths, `prefix-**` sometimes works where `prefix-*` does not; still **default to plain `**`** when one pattern covers every module. Apply the same rule to cucumber.glue.
+
+Reference: see the "Example settings.json" section in the Cucumber Jump README for the shape of projects and libraries.
+
+Example monorepo pattern (rename segments to match your repo): featureGlob "services/**/feature/**/*.feature", bddFile "services/**/testing/bdd.go", stepsGlob "services/**/testing/*_steps.go", plus a libraries entry for any shared tree (e.g. libs/bdd-shared/feature and libs/bdd-shared/steps as in the Example settings.json below).
+
+Output: proposed JSON fragment or full merged settings.json. If you cannot write files, show the diff clearly and remind the human to review before saving.
+```
+
+</details>
+
+---
+
 ## How your repo maps to settings
 
 | Concept                 | Typical files                        | Role                                                                                                                                                      |
@@ -79,6 +118,8 @@ Delay in milliseconds (default **200**, minimum **50**) before **Dev mode** sync
 ### Wildcards in `bddFile` and `stepsGlob`
 
 If the pattern contains **`**`**, the extension builds a concrete path from the open feature’s **package root** (everything before `/feature/`). Example: `\*\*/testing/bdd.go`+`repo/my-svc/feature/x.feature`→`repo/my-svc/testing/bdd.go`.
+
+**Registry and implementations in one file:** `stepsGlob` selects which Go files are searched for `func HandlerName(` bodies. A typical `*_steps.go` glob does **not** match `bdd.go`. If your handlers live in the same file as the step map, set `bddFile` to that file and set `stepsGlob` to a glob that includes it (for example the same relative path, or a folder glob like `my/module/testing/*.go` if that stays small enough).
 
 ---
 
