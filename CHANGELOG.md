@@ -4,6 +4,15 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.31] - 2026-03-30
+
+### Added
+
+- **`cucumberJump.notifyConflictingExtensions`** (default **true**): one-time notification when **Cucumber (Gherkin) Full Support** (`alexkrechik.cucumberautocomplete`) or **Cucumber** (`CucumberOpen.cucumber-official`) is installed—VS Code merges definition providers, so **F12** (*Go to primary step target*) is the reliable Cucumber Jump-only jump. Dismiss with *Don't show again* (global storage).
+- README: coexisting with other Cucumber extensions; **`notifyConflictingExtensions`** note.
+
+[0.1.31]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.30...v0.1.31
+
 ## [0.1.30] - 2026-03-27
 
 ### Added

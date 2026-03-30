@@ -2,7 +2,7 @@
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
   "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
-  "version": "0.1.30",
+  "version": "0.1.31",
   "publisher": "lntvan166",
   "author": "lntvan166",
   "repository": {
@@ -94,6 +94,11 @@
           "default": 200,
           "minimum": 50,
           "markdownDescription": "Delay (ms) before syncing the paired pane in **Dev mode** after cursor moves."
+        },
+        "cucumberJump.notifyConflictingExtensions": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When **true** (default), show a one-time notice if another Cucumber/Gherkin extension is installed: VS Code **merges** all **Go to Definition** results on `.feature` steps, so Cucumber Jump cannot override Ctrl+click priority. Use **F12** (*Go to primary step target*) for this extension only, or **Disable (Workspace)** the other extension. Dismiss with *Don't show again* (stored globally)."
         },
         "cucumberJump.libraries": {
           "type": "array",

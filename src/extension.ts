@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { scheduleConflictingExtensionHint } from "./conflictHint";
 import { isBddStepDeclarationPosition } from "./bddParser";
 import { findPackForBddFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
@@ -38,6 +39,7 @@ function logDefinitionProviderError(err: unknown): void {
 export function activate(context: vscode.ExtensionContext): void {
   registerStepUi(context);
   registerDevMode(context);
+  scheduleConflictingExtensionHint(context);
   const definitionProvider: vscode.DefinitionProvider = {
     provideDefinition: async (document, position, token) => {
       try {

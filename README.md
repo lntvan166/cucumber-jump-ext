@@ -184,6 +184,16 @@ Highlighting for `.feature` files comes from your **Gherkin / Cucumber** extensi
 
 If you use the **official Cucumber** extension, set **`cucumber.glue`** to include your `*_steps.go` globs so its language server does not fight navigation on the same lines.
 
+### Coexisting with **Cucumber (Gherkin) Full Support** (`alexkrechik.cucumberautocomplete`)
+
+That extension and **Cucumber Jump** both contribute **Go to Definition** on `.feature` steps. VS Code **merges** all definition providers, so you can see **duplicate or wrong targets** if glue/steps paths do not match your repo.
+
+1. **Align `cucumberautocomplete`** with the same Go trees as Cucumber Jump: set **`cucumberautocomplete.steps`** to your `testing/*.go` and shared `steps/*.go` globs, **`cucumberautocomplete.syncfeatures`** to your `**/*.feature` glob, and set **`cucumberautocomplete.strictGherkinCompletion`** / **`strictGherkinValidation`** to **`false`** for godog-style steps.
+2. Prefer **F12** (**Cucumber Jump: Go to primary step target**) or **Cucumber Jump: Peek step targets** when Ctrl+click shows a merged list you do not trust.
+3. If it still fights your workflow: **Extensions → Cucumber (Gherkin) Full Support → Disable (Workspace)** and keep **Cucumber Jump** for navigation (you can keep **Cucumber** / **Gherkin** syntax from another extension if needed).
+
+**Notice:** If a conflicting extension is installed, Cucumber Jump shows a **one-time** editor notification (dismiss with *Don't show again*). Turn off with **`cucumberJump.notifyConflictingExtensions`**: **false**.
+
 ---
 
 ## License
