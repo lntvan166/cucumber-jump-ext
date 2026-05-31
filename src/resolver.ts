@@ -301,7 +301,7 @@ export async function resolveFeatureUsagesFromStepsAtPosition(
 
   // ── New adapter path: no bddFile ───────────────────────────────────────
   const adapter = getAdapterForUri(document.uri);
-  const defs = adapter.parseStepDefinitions(document.getText());
+  const defs = await getStepDefinitions(document.uri, adapter);
   const def = findDefinitionAtPosition(defs, position.line);
   if (!def) {
     return undefined;

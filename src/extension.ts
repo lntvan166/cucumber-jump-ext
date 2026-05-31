@@ -213,12 +213,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.languageId === "go" || isFeatureDocument(e.document)) {
+      if (e.document.languageId === "go" || isFeatureDocument(e.document) || Boolean(findPackForStepsFile(e.document.uri))) {
         invalidate(e.document.uri);
       }
     }),
     vscode.workspace.onDidSaveTextDocument((doc) => {
-      if (doc.languageId === "go" || isFeatureDocument(doc)) {
+      if (doc.languageId === "go" || isFeatureDocument(doc) || Boolean(findPackForStepsFile(doc.uri))) {
         invalidate(doc.uri);
       }
     }),
