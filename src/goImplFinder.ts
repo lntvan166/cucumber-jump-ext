@@ -53,14 +53,14 @@ export async function findImplementationLocation(
 
 export function bddUriForEntry(entry: ResolutionEntry, featureSourceUri: vscode.Uri): vscode.Uri {
   const featureRel = workspaceRelativePath(entry.folder, featureSourceUri);
-  const bddRel = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.bddFile);
+  const bddRel = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.bddFile ?? "");
 
   return resolvePathUri(entry.folder, bddRel);
 }
 
 export function bddUriForStepsEntry(entry: ResolutionEntry, stepsSourceUri: vscode.Uri): vscode.Uri {
   const stepsRel = workspaceRelativePath(entry.folder, stepsSourceUri);
-  const bddRel = concretePathFromStepsAndGlobPattern(stepsRel, entry.pack.bddFile);
+  const bddRel = concretePathFromStepsAndGlobPattern(stepsRel, entry.pack.bddFile ?? "");
 
   return resolvePathUri(entry.folder, bddRel);
 }

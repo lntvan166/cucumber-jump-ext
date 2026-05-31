@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 export type PackConfig = {
   name?: string;
   featureGlob: string;
-  bddFile: string;
+  bddFile?: string;
   stepsGlob: string;
 };
 
@@ -141,6 +141,9 @@ function pickBestProjectForFeature(rel: string, candidates: PackConfig[]): PackC
   const root = featurePackageRoot(rel);
   if (root) {
     const bddUnderSameRoot = candidates.filter((p) => {
+      if (!p.bddFile) {
+        return false;
+      }
       const concrete = concretePathFromFeatureAndGlobPattern(rel, p.bddFile);
       const c = concrete.replace(/\\/g, "/");
 
@@ -204,13 +207,13 @@ export function findPackForBddFile(bddUri: vscode.Uri): BddPackMatch | undefined
   const { projects, libraries } = readPackConfigs();
 
   for (const pack of projects) {
-    if (pathMatchesConfigPath(rel, pack.bddFile)) {
+    if (pack.bddFile && pathMatchesConfigPath(rel, pack.bddFile)) {
       return { entry: { folder, pack }, fromProject: true };
     }
   }
 
   for (const pack of libraries) {
-    if (pathMatchesConfigPath(rel, pack.bddFile)) {
+    if (pack.bddFile && pathMatchesConfigPath(rel, pack.bddFile)) {
       return { entry: { folder, pack }, fromProject: false };
     }
   }
