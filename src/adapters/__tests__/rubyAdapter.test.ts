@@ -28,6 +28,10 @@ describe('parseRubyStepDefinitions', () => {
     const content = "Given('step one') do\nend\nWhen('step two') do\nend";
     expect(parseRubyStepDefinitions(content)).toHaveLength(2);
   });
+
+  it('ignores non-step lines', () => {
+    expect(parseRubyStepDefinitions('def some_helper\nend')).toHaveLength(0);
+  });
 });
 
 describe('rubyAdapter.matchesStep', () => {
@@ -41,5 +45,9 @@ describe('rubyAdapter.matchesStep', () => {
 
   it('matches regex', () => {
     expect(rubyAdapter.matchesStep(makeDef('^I have (\\d+) cucumbers$'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+
+  it('does not match different step', () => {
+    expect(rubyAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
 });

@@ -38,6 +38,10 @@ describe('parseDartStepDefinitions', () => {
     ].join('\n');
     expect(parseDartStepDefinitions(content)).toHaveLength(2);
   });
+
+  it('ignores non-step lines', () => {
+    expect(parseDartStepDefinitions('final x = something();')).toHaveLength(0);
+  });
 });
 
 describe('dartAdapter.matchesStep', () => {
@@ -47,5 +51,9 @@ describe('dartAdapter.matchesStep', () => {
 
   it('matches Cucumber Expression', () => {
     expect(dartAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+
+  it('does not match different step', () => {
+    expect(dartAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
 });

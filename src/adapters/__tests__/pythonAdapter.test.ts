@@ -46,6 +46,10 @@ describe('parsePythonStepDefinitions', () => {
     const defs = parsePythonStepDefinitions(content);
     expect(defs).toHaveLength(2);
   });
+
+  it('ignores non-decorator lines', () => {
+    expect(parsePythonStepDefinitions('def some_helper(context): pass')).toHaveLength(0);
+  });
 });
 
 describe('pythonAdapter.matchesStep', () => {
@@ -59,5 +63,9 @@ describe('pythonAdapter.matchesStep', () => {
 
   it('matches Cucumber Expression', () => {
     expect(pythonAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+
+  it('does not match different step', () => {
+    expect(pythonAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
 });

@@ -38,6 +38,10 @@ describe('parseCsharpStepDefinitions', () => {
     ].join('\n');
     expect(parseCsharpStepDefinitions(content)).toHaveLength(2);
   });
+
+  it('ignores non-attribute lines', () => {
+    expect(parseCsharpStepDefinitions('public void SomeMethod() {}')).toHaveLength(0);
+  });
 });
 
 describe('csharpAdapter.matchesStep', () => {
@@ -47,5 +51,13 @@ describe('csharpAdapter.matchesStep', () => {
 
   it('matches Cucumber Expression', () => {
     expect(csharpAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+
+  it('matches exact text', () => {
+    expect(csharpAdapter.matchesStep(makeDef('the user logs in'), 'the user logs in', 'the user logs in')).toBe(true);
+  });
+
+  it('does not match different step', () => {
+    expect(csharpAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
 });

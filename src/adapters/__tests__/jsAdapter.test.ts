@@ -38,6 +38,10 @@ describe('parseJsStepDefinitions', () => {
     ].join('\n');
     expect(parseJsStepDefinitions(content)).toHaveLength(2);
   });
+
+  it('ignores non-step lines', () => {
+    expect(parseJsStepDefinitions('const x = someFunction();')).toHaveLength(0);
+  });
 });
 
 describe('jsAdapter.matchesStep', () => {
@@ -51,5 +55,9 @@ describe('jsAdapter.matchesStep', () => {
 
   it('matches regex pattern', () => {
     expect(jsAdapter.matchesStep(makeDef('^I have (\\d+) cucumbers$'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+
+  it('does not match different step', () => {
+    expect(jsAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
 });
