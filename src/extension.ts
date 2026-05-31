@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { scheduleConflictingExtensionHint } from "./conflictHint";
 import { isBddStepDeclarationPosition } from "./bddParser";
-import { findPackForBddFile } from "./config";
+import { findPackForBddFile, findPackForStepsFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
 import { isFeatureUri } from "./featureParser";
-import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly } from "./resolver";
+import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly, resolveFeatureUsagesFromStepsAtPosition } from "./resolver";
 import { registerStepUi } from "./stepUi";
 
 /**
@@ -28,6 +28,27 @@ const featureStepDocumentSelector: vscode.DocumentSelector = [
 
 /** Bdd map files: scoped `scheme` so registration does not collide broadly with all Go documents. */
 const goBddDocumentSelector: vscode.DocumentSelector = [
+  { language: "go", scheme: "file" },
+  { language: "go", scheme: "vscode-remote" },
+];
+
+const adapterStepFileSelector: vscode.DocumentSelector = [
+  { language: "java", scheme: "file" },
+  { language: "java", scheme: "vscode-remote" },
+  { language: "kotlin", scheme: "file" },
+  { language: "kotlin", scheme: "vscode-remote" },
+  { language: "python", scheme: "file" },
+  { language: "python", scheme: "vscode-remote" },
+  { language: "javascript", scheme: "file" },
+  { language: "javascript", scheme: "vscode-remote" },
+  { language: "typescript", scheme: "file" },
+  { language: "typescript", scheme: "vscode-remote" },
+  { language: "ruby", scheme: "file" },
+  { language: "ruby", scheme: "vscode-remote" },
+  { language: "csharp", scheme: "file" },
+  { language: "csharp", scheme: "vscode-remote" },
+  { language: "dart", scheme: "file" },
+  { language: "dart", scheme: "vscode-remote" },
   { language: "go", scheme: "file" },
   { language: "go", scheme: "vscode-remote" },
 ];
@@ -100,6 +121,42 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerDefinitionProvider(goBddDocumentSelector, definitionProvider),
     vscode.languages.registerReferenceProvider(goBddDocumentSelector, bddStepReferenceProvider),
     vscode.languages.registerImplementationProvider(featureStepDocumentSelector, implementationProvider),
+  );
+
+  // Reverse navigation for new-path step files (no bddFile): step definition → .feature usages
+  const adapterStepDefinitionProvider: vscode.DefinitionProvider = {
+    provideDefinition: async (document, position, token) => {
+      try {
+        const match = findPackForStepsFile(document.uri);
+        if (!match || match.entry.pack.bddFile) {
+          return undefined;
+        }
+        return await resolveFeatureUsagesFromStepsAtPosition(document, position, token);
+      } catch (err) {
+        logDefinitionProviderError(err);
+        return undefined;
+      }
+    },
+  };
+
+  const adapterStepReferenceProvider: vscode.ReferenceProvider = {
+    provideReferences: async (document, position, _ctx, token) => {
+      try {
+        const match = findPackForStepsFile(document.uri);
+        if (!match || match.entry.pack.bddFile) {
+          return undefined;
+        }
+        return await resolveFeatureUsagesFromStepsAtPosition(document, position, token);
+      } catch (err) {
+        logDefinitionProviderError(err);
+        return undefined;
+      }
+    },
+  };
+
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(adapterStepFileSelector, adapterStepDefinitionProvider),
+    vscode.languages.registerReferenceProvider(adapterStepFileSelector, adapterStepReferenceProvider),
   );
 
   context.subscriptions.push(

@@ -50,7 +50,6 @@
             "type": "object",
             "required": [
               "featureGlob",
-              "bddFile",
               "stepsGlob"
             ],
             "properties": {
@@ -64,7 +63,7 @@
               },
               "bddFile": {
                 "type": "string",
-                "description": "Path or glob relative to workspace folder. If it contains **, the segment after **/ is appended to the feature file’s package root (path before /feature/), e.g. **/testing/bdd.go with repo/my-api/feature/x.feature → repo/my-api/testing/bdd.go."
+                "description": "Optional. Path or glob to a Go BDD step registry file (e.g. bdd.go). Only required for the legacy Go godog StepMap pattern. Omit for all other languages — the adapter auto-detects step patterns from stepsGlob file extension."
               },
               "stepsGlob": {
                 "type": "string",
@@ -107,7 +106,6 @@
             "type": "object",
             "required": [
               "featureGlob",
-              "bddFile",
               "stepsGlob"
             ],
             "properties": {
@@ -118,7 +116,8 @@
                 "type": "string"
               },
               "bddFile": {
-                "type": "string"
+                "type": "string",
+                "description": "Optional. Path or glob to a Go BDD step registry file (e.g. bdd.go). Only required for the legacy Go godog StepMap pattern. Omit for all other languages — the adapter auto-detects step patterns from stepsGlob file extension."
               },
               "stepsGlob": {
                 "type": "string"
