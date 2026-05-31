@@ -35,7 +35,7 @@ export async function findFeatureUsages(
     }
 
     const pattern = new vscode.RelativePattern(folder, glob);
-    const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 200, token);
+    const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 5000, token);
 
     for (const file of files) {
       if (token.isCancellationRequested) {

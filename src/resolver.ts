@@ -62,7 +62,7 @@ async function resolveFromFeatureViaAdapter(
   const featureRel = workspaceRelativePath(entry.folder, document.uri);
   const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
   const pattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
-  const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 200, token);
+  const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 5000, token);
 
   for (const file of files) {
     if (token.isCancellationRequested) {
@@ -198,12 +198,24 @@ export async function explainFeatureStepResolution(
 
     if (!entry.pack.bddFile) {
       out.push(`  stepsGlob=${entry.pack.stepsGlob} (adapter path — no bddFile)`);
+      // Report how many step files are visible
+      const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(
+        workspaceRelativePath(entry.folder, document.uri),
+        entry.pack.stepsGlob,
+      );
+      const diagPattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
+      const diagFiles = await vscode.workspace.findFiles(diagPattern, "**/node_modules/**", 5000, token);
+      out.push(`  Step files found: ${diagFiles.length} (glob: ${stepsGlobConcrete})`);
+      if (diagFiles.length === 0) {
+        out.push("  ⚠ No step files match this glob — check stepsGlob in your cucumberJump settings.");
+        continue;
+      }
       const result = await resolveFromFeatureViaAdapter(entry, document, stepText, normalized, token);
       if (result && result.length > 0) {
         out.push(`  → ${vscode.workspace.asRelativePath(result[0].uri)}:${result[0].range.start.line + 1}`);
         return out;
       }
-      out.push("  No match found in step files.");
+      out.push("  No matching step definition found in these files.");
       continue;
     }
 
@@ -364,6 +376,10 @@ export async function resolveRegistryOnly(
       return undefined;
     }
 
+    if (!entry.pack.bddFile) {
+      continue;
+    }
+
     const bddUri = bddUriForEntry(entry, document.uri);
     let blocks: BddStepBlock[];
     try {
@@ -399,6 +415,10 @@ export async function resolveImplementationOnly(
   for (const entry of chain) {
     if (token.isCancellationRequested) {
       return undefined;
+    }
+
+    if (!entry.pack.bddFile) {
+      continue;
     }
 
     const bddUri = bddUriForEntry(entry, document.uri);

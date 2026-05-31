@@ -20,7 +20,7 @@ export async function findImplementationLocation(
   const featureRel = workspaceRelativePath(entry.folder, featureSourceUri);
   const stepsGlob = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
   const pattern = new vscode.RelativePattern(entry.folder, stepsGlob);
-  const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 200, token);
+  const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 5000, token);
 
   const re = new RegExp(`^\\s*func\\s+${escapeRegExp(functionName)}\\s*\\(`);
 
