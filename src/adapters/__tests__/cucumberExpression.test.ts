@@ -7,6 +7,10 @@ describe('isCucumberExpression', () => {
   it('returns false for regex with quantifier braces', () => {
     expect(isCucumberExpression('^\\d{3}$')).toBe(false);
   });
+  it('returns false for unanchored regex with numeric quantifier', () => {
+    expect(isCucumberExpression('there are \\d{3} items')).toBe(false);
+    expect(isCucumberExpression('price is \\d{1,3}\\.\\d{2}')).toBe(false);
+  });
   it('returns false for anchored regex', () => {
     expect(isCucumberExpression('^I have (\\d+) cucumbers$')).toBe(false);
     expect(isCucumberExpression('I have (\\d+) cucumbers$')).toBe(false);

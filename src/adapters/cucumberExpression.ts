@@ -15,7 +15,7 @@ export function isCucumberExpression(pattern: string): boolean {
   if (pattern.startsWith('^') || pattern.endsWith('$')) {
     return false;
   }
-  return /\{[\w]*\}/.test(pattern);
+  return /\{[a-zA-Z]\w*\}/.test(pattern);
 }
 
 export function cucumberExpressionToRegex(pattern: string): RegExp {
