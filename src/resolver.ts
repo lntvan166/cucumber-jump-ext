@@ -12,6 +12,12 @@ import { findFeatureUsages } from "./featureFinder";
 import { getStepTextAtLineNumber, normalizeStepText } from "./featureParser";
 import { findImplementationLocation } from "./goImplFinder";
 import { isSameLocalFile } from "./sameFileUri";
+import { getAdapterForGlob, getAdapterForUri } from "./adapterRegistry";
+import { getStepDefinitions } from "./documentCache";
+import { findDefinitionAtPosition } from "./languageAdapter";
+import type { StepDefinition } from "./languageAdapter";
+import { isCucumberExpression, cucumberExpressionToRegex } from "./adapters/cucumberExpression";
+import { concretePathFromFeatureAndGlobPattern, workspaceRelativePath } from "./config";
 
 function bddLocationForBlock(uri: vscode.Uri, block: BddStepBlock): vscode.Location {
   const start = new vscode.Position(block.regexLine, block.regexStartColumn);
@@ -45,6 +51,56 @@ function dedupeDefinitionsOutsideSourceDoc(source: vscode.TextDocument, location
   return out;
 }
 
+async function resolveFromFeatureViaAdapter(
+  entry: import("./config").ResolutionEntry,
+  document: vscode.TextDocument,
+  stepText: string,
+  normalizedStep: string,
+  token: vscode.CancellationToken,
+): Promise<vscode.Location[] | undefined> {
+  const adapter = getAdapterForGlob(entry.pack.stepsGlob);
+  const featureRel = workspaceRelativePath(entry.folder, document.uri);
+  const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
+  const pattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
+  const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 200, token);
+
+  for (const file of files) {
+    if (token.isCancellationRequested) {
+      return undefined;
+    }
+
+    let defs: StepDefinition[];
+    try {
+      defs = await getStepDefinitions(file, adapter);
+    } catch {
+      continue;
+    }
+
+    const def = defs.find((d) => adapter.matchesStep(d, stepText, normalizedStep));
+    if (!def) {
+      continue;
+    }
+
+    if (def.implLine !== undefined) {
+      const pos = new vscode.Position(def.implLine, 0);
+      return [new vscode.Location(file, new vscode.Range(pos, pos))];
+    }
+
+    if (def.implFunctionName) {
+      const impl = await findImplementationLocation(entry, def.implFunctionName, token, document.uri);
+      if (impl) {
+        return [impl];
+      }
+    }
+
+    const start = new vscode.Position(def.patternLine, def.patternStartCol);
+    const end = new vscode.Position(def.patternLine, def.patternEndCol);
+    return [new vscode.Location(file, new vscode.Range(start, end))];
+  }
+
+  return undefined;
+}
+
 export async function resolveFromFeature(
   document: vscode.TextDocument,
   position: vscode.Position,
@@ -66,42 +122,47 @@ export async function resolveFromFeature(
       return undefined;
     }
 
-    const bddUri = bddUriForEntry(entry, document.uri);
-    let blocks: BddStepBlock[];
-    try {
-      blocks = await getBddBlocks(bddUri);
-    } catch {
-      continue;
-    }
-
-    const block = blocks.find((b) => blockMatchesStep(b, stepText, normalized));
-    if (!block) {
-      continue;
-    }
-
-    const locations: vscode.Location[] = [];
-    if (block.implFunctionName) {
-      const impl = await findImplementationLocation(entry, block.implFunctionName, token, document.uri);
-      if (impl) {
-        locations.push(impl);
+    // ── Legacy path: bddFile registry present ──────────────────────────────
+    if (entry.pack.bddFile) {
+      const bddUri = bddUriForEntry(entry, document.uri);
+      let blocks: BddStepBlock[];
+      try {
+        blocks = await getBddBlocks(bddUri);
+      } catch {
+        continue;
       }
+
+      const block = blocks.find((b) => blockMatchesStep(b, stepText, normalized));
+      if (!block) {
+        continue;
+      }
+
+      const locations: vscode.Location[] = [];
+      if (block.implFunctionName) {
+        const impl = await findImplementationLocation(entry, block.implFunctionName, token, document.uri);
+        if (impl) {
+          locations.push(impl);
+        }
+      }
+
+      if (shouldIncludeStepRegistryInDefinition()) {
+        locations.push(bddLocationForBlock(bddUri, block));
+      }
+
+      if (locations.length === 0) {
+        locations.push(bddLocationForBlock(bddUri, block));
+      }
+
+      const filtered = dedupeDefinitionsOutsideSourceDoc(document, locations);
+      return filtered.length === 0 ? locations : filtered;
     }
 
-    if (shouldIncludeStepRegistryInDefinition()) {
-      locations.push(bddLocationForBlock(bddUri, block));
+    // ── New adapter path: no bddFile ───────────────────────────────────────
+    const result = await resolveFromFeatureViaAdapter(entry, document, stepText, normalized, token);
+    if (result) {
+      const filtered = dedupeDefinitionsOutsideSourceDoc(document, result);
+      return filtered.length === 0 ? result : filtered;
     }
-
-    if (locations.length === 0) {
-      locations.push(bddLocationForBlock(bddUri, block));
-    }
-
-    const filtered = dedupeDefinitionsOutsideSourceDoc(document, locations);
-    if (filtered.length === 0) {
-      // Dedupe should not drop every target; if it does (URI edge case), still return resolutions.
-      return locations;
-    }
-
-    return filtered;
   }
 
   return undefined;
@@ -132,9 +193,22 @@ export async function explainFeatureStepResolution(
       return out;
     }
 
-    const bddUri = bddUriForEntry(entry, document.uri);
     out.push("");
     out.push(`Pack: ${entry.pack.name ?? "(unnamed)"}  featureGlob=${entry.pack.featureGlob}`);
+
+    if (!entry.pack.bddFile) {
+      out.push(`  stepsGlob=${entry.pack.stepsGlob} (adapter path — no bddFile)`);
+      const result = await resolveFromFeatureViaAdapter(entry, document, stepText, normalized, token);
+      if (result && result.length > 0) {
+        out.push(`  → ${vscode.workspace.asRelativePath(result[0].uri)}:${result[0].range.start.line + 1}`);
+        return out;
+      }
+      out.push("  No match found in step files.");
+      continue;
+    }
+
+    // existing bddFile logic follows unchanged...
+    const bddUri = bddUriForEntry(entry, document.uri);
     out.push(`  bdd → ${vscode.workspace.asRelativePath(bddUri)}`);
 
     let blocks: BddStepBlock[];
@@ -198,29 +272,56 @@ export async function resolveFeatureUsagesFromStepsAtPosition(
     return undefined;
   }
 
-  const funcName = functionNameAtOrAboveLine(document, position.line);
-  if (!funcName) {
+  // ── Legacy path: bddFile present ───────────────────────────────────────
+  if (match.entry.pack.bddFile) {
+    const funcName = functionNameAtOrAboveLine(document, position.line);
+    if (!funcName) {
+      return undefined;
+    }
+
+    const bddUri = bddUriForStepsEntry(match.entry, document.uri);
+    let blocks: BddStepBlock[];
+    try {
+      blocks = await getBddBlocks(bddUri);
+    } catch {
+      return undefined;
+    }
+
+    const block = blocks.find((b) => b.implFunctionName === funcName);
+    if (!block) {
+      return undefined;
+    }
+
+    const canonical = stepTextFromBlock(block);
+    const bddMatch = { entry: match.entry, fromProject: match.fromProject };
+    const globs = getFeatureGlobsForBddReverse(bddMatch);
+
+    return findFeatureUsages(match.entry.folder, globs, canonical, block.regexPattern, token);
+  }
+
+  // ── New adapter path: no bddFile ───────────────────────────────────────
+  const adapter = getAdapterForUri(document.uri);
+  const defs = adapter.parseStepDefinitions(document.getText());
+  const def = findDefinitionAtPosition(defs, position.line);
+  if (!def) {
     return undefined;
   }
 
-  const bddUri = bddUriForStepsEntry(match.entry, document.uri);
-  let blocks: BddStepBlock[];
-  try {
-    blocks = await getBddBlocks(bddUri);
-  } catch {
-    return undefined;
-  }
-
-  const block = blocks.find((b) => b.implFunctionName === funcName);
-  if (!block) {
-    return undefined;
-  }
-
-  const canonical = stepTextFromBlock(block);
   const bddMatch = { entry: match.entry, fromProject: match.fromProject };
   const globs = getFeatureGlobsForBddReverse(bddMatch);
 
-  return findFeatureUsages(match.entry.folder, globs, canonical, block.regexPattern, token);
+  let regexPattern: string | undefined;
+  if (isCucumberExpression(def.pattern)) {
+    try {
+      regexPattern = cucumberExpressionToRegex(def.pattern).source;
+    } catch {
+      regexPattern = undefined;
+    }
+  } else {
+    regexPattern = def.pattern;
+  }
+
+  return findFeatureUsages(match.entry.folder, globs, def.pattern, regexPattern, token);
 }
 
 export async function resolveFromBdd(
