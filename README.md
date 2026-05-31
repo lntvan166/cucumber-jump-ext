@@ -32,7 +32,7 @@ The extension **auto-detects the language** from the file extension in your `ste
 |---|---|---|
 | Java | `.java` | Cucumber-JVM |
 | Kotlin | `.kt` | Cucumber-JVM |
-| Python | `.py` | behave, pytest-bdd |
+| Python | `.py` | behave (full support), pytest-bdd (`@given`/`@when`/`@then` decorators only) |
 | JavaScript | `.js` | cucumber-js |
 | TypeScript | `.ts` | cucumber-js |
 | Ruby | `.rb` | Cucumber-Ruby |

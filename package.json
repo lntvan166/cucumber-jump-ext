@@ -1,7 +1,7 @@
 {
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
-  "description": "Navigate between Gherkin .feature steps and Go godog StepMap / implementations.",
+  "description": "Navigate between Gherkin .feature files and step definitions across Java, Kotlin, Python, JavaScript, TypeScript, Ruby, C#, Dart, and Go.",
   "version": "0.1.31",
   "publisher": "lntvan166",
   "author": "lntvan166",
@@ -20,6 +20,14 @@
   ],
   "activationEvents": [
     "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:kotlin",
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:ruby",
+    "onLanguage:csharp",
+    "onLanguage:dart",
     "onLanguage:gherkin",
     "onLanguage:cucumber",
     "onLanguage:feature",
@@ -67,7 +75,7 @@
               },
               "stepsGlob": {
                 "type": "string",
-                "description": "Glob for *_steps.go files. Same ** rule as bddFile so searches stay in the same service folder."
+                "description": "Glob for step definition files. The file extension determines the language: .java/.kt → Java/Kotlin, .py → Python, .ts/.js → JavaScript/TypeScript, .rb → Ruby, .cs → C#, .dart → Dart, .go → Go. The ** rule applies the same way as bddFile."
               }
             }
           },
@@ -120,7 +128,8 @@
                 "description": "Optional. Path or glob to a Go BDD step registry file (e.g. bdd.go). Only required for the legacy Go godog StepMap pattern. Omit for all other languages — the adapter auto-detects step patterns from stepsGlob file extension."
               },
               "stepsGlob": {
-                "type": "string"
+                "type": "string",
+                "description": "Glob for step definition files. Extension determines the language (same as cucumberJump.projects)."
               }
             }
           },

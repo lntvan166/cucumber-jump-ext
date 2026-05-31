@@ -287,7 +287,7 @@ async function syncFromEditor(editor: vscode.TextEditor | undefined): Promise<vo
       return;
     }
 
-    if (doc.languageId !== "go") {
+    if (doc.languageId !== "go" && !findPackForStepsFile(doc.uri)) {
       return;
     }
 
@@ -457,7 +457,7 @@ export async function openDevMode(): Promise<void> {
           primary = new vscode.Location(bddUri, new vscode.Range(start, start));
         } catch {
           await vscode.window.showInformationMessage(
-            "Cucumber Jump: could not open bdd.go for this feature; check cucumberJump.projects / libraries.",
+            "Cucumber Jump: could not open a step file for this feature; check cucumberJump.projects / libraries.",
           );
           return;
         }
@@ -496,7 +496,7 @@ export async function openDevMode(): Promise<void> {
     }
 
     await vscode.window.showInformationMessage(
-      "Cucumber Jump: could not resolve a .feature line from this Go position (use a bdd step line or *_steps.go inside a handler).",
+      "Cucumber Jump: could not resolve a .feature line from this position — place the cursor on a step definition line.",
     );
   } finally {
     cts.dispose();

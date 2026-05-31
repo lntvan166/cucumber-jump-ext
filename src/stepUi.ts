@@ -197,7 +197,7 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
 
       status.text = "$(question) Cucumber Jump: no impl";
       status.tooltip = new vscode.MarkdownString(
-        "No `*_steps.go` match for this step yet — **click** for the step-by-step resolution log.",
+        "No step definition found for this step yet — **click** for the step-by-step resolution log.",
         true,
       );
       status.show();
