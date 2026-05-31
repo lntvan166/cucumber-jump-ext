@@ -72,4 +72,9 @@ describe('javaAdapter.matchesStep', () => {
   it('does not match different step', () => {
     expect(javaAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I eat 5 cucumbers', 'i eat 5 cucumbers')).toBe(false);
   });
+
+  it('does not match a step that only contains the pattern as substring', () => {
+    const def = { pattern: 'the user logs in', patternLine: 0, patternStartCol: 0, patternEndCol: 16 };
+    expect(javaAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
+  });
 });

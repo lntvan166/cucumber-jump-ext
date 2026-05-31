@@ -80,11 +80,13 @@ function stepMatches(pattern: string, rawStep: string, normalizedStep: string): 
       return false;
     }
   }
-  try {
-    return new RegExp(pattern).test(rawStep.trim());
-  } catch {
-    return false;
+  // If pattern is already anchored with ^ or $, treat as intentional regex
+  if (pattern.startsWith('^') || pattern.endsWith('$')) {
+    try { return new RegExp(pattern).test(rawStep.trim()); } catch { return false; }
   }
+  // Otherwise treat as a literal string — escape special chars and anchor it
+  const escaped = pattern.replace(/[.*+?^$|{}[\]\\()]/g, '\\$&');
+  try { return new RegExp(`^${escaped}$`, 'i').test(rawStep.trim()); } catch { return false; }
 }
 
 export const jsAdapter: LanguageAdapter = {
