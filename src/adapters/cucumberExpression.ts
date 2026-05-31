@@ -12,6 +12,9 @@ const TYPE_PATTERNS: Record<string, string> = {
 };
 
 export function isCucumberExpression(pattern: string): boolean {
+  if (pattern.startsWith('^') || pattern.endsWith('$')) {
+    return false;
+  }
   return /\{[\w]*\}/.test(pattern);
 }
 
@@ -23,7 +26,7 @@ export function cucumberExpressionToRegex(pattern: string): RegExp {
         const type = token.slice(1, -1);
         return `(${TYPE_PATTERNS[type] ?? '[^,]+'})`;
       }
-      return token.replace(/[.*+?^$[\]\\()]/g, '\\$&');
+      return token.replace(/[.*+?^$|{}[\]\\()]/g, '\\$&');
     })
     .join('');
   return new RegExp(`^${regexStr}$`);

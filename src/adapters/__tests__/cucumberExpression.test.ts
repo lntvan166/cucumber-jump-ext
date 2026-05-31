@@ -4,6 +4,13 @@ import { cucumberExpressionToRegex, isCucumberExpression } from '../cucumberExpr
 describe('isCucumberExpression', () => {
   it('returns true for {int}', () => expect(isCucumberExpression('I have {int} cucumbers')).toBe(true));
   it('returns false for plain regex', () => expect(isCucumberExpression('^I have (\\d+) cucumbers$')).toBe(false));
+  it('returns false for regex with quantifier braces', () => {
+    expect(isCucumberExpression('^\\d{3}$')).toBe(false);
+  });
+  it('returns false for anchored regex', () => {
+    expect(isCucumberExpression('^I have (\\d+) cucumbers$')).toBe(false);
+    expect(isCucumberExpression('I have (\\d+) cucumbers$')).toBe(false);
+  });
 });
 
 describe('cucumberExpressionToRegex', () => {
@@ -36,5 +43,12 @@ describe('cucumberExpressionToRegex', () => {
     const re = cucumberExpressionToRegex('price is {float} USD');
     expect(re.test('price is 3.14 USD')).toBe(true);
     expect(re.test('price is 3X14 USD')).toBe(false);
+  });
+
+  it('escapes literal pipe character', () => {
+    const re = cucumberExpressionToRegex('answer is yes|no');
+    expect(re.test('answer is yes|no')).toBe(true);
+    expect(re.test('yes')).toBe(false);
+    expect(re.test('no')).toBe(false);
   });
 });
