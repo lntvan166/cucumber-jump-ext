@@ -1,6 +1,9 @@
 import * as vscode from "vscode";
 import { parseBddFile, type BddStepBlock } from "./bddParser";
+import type { LanguageAdapter, StepDefinition } from "./languageAdapter";
 import { isSameLocalFile } from "./sameFileUri";
+
+// ── Legacy Go BDD block cache ─────────────────────────────────────────────────
 
 type BddCacheEntry = {
   mtime: number;
@@ -35,10 +38,49 @@ export async function getBddBlocks(uri: vscode.Uri): Promise<BddStepBlock[]> {
   return blocks;
 }
 
+// ── New adapter-based StepDefinition cache ────────────────────────────────────
+
+type StepDefCacheEntry = {
+  mtime: number;
+  defs: StepDefinition[];
+};
+
+const stepDefCache = new Map<string, StepDefCacheEntry>();
+
+export async function getStepDefinitions(
+  uri: vscode.Uri,
+  adapter: LanguageAdapter,
+): Promise<StepDefinition[]> {
+  const open = openDocForUri(uri);
+  if (open) {
+    return adapter.parseStepDefinitions(open.getText());
+  }
+
+  const stat = await vscode.workspace.fs.stat(uri);
+  const mtime = typeof stat.mtime === "number" ? stat.mtime : Number(stat.mtime);
+  const key = uri.toString();
+  const existing = stepDefCache.get(key);
+  if (existing && existing.mtime === mtime) {
+    return existing.defs;
+  }
+
+  const bytes = await vscode.workspace.fs.readFile(uri);
+  const text = new TextDecoder("utf-8").decode(bytes);
+  const defs = adapter.parseStepDefinitions(text);
+  stepDefCache.set(key, { mtime, defs });
+
+  return defs;
+}
+
+// ── Invalidation ──────────────────────────────────────────────────────────────
+
 export function invalidateDocument(uri: vscode.Uri): void {
-  bddCache.delete(uri.toString());
+  const key = uri.toString();
+  bddCache.delete(key);
+  stepDefCache.delete(key);
 }
 
 export function invalidateAll(): void {
   bddCache.clear();
+  stepDefCache.clear();
 }
