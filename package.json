@@ -204,14 +204,17 @@
     "watch": "tsc -watch -p ./",
     "vscode:prepublish": "npm run compile",
     "package": "vsce package --allow-missing-repository --no-rewrite-relative-links",
-    "package:marketplace": "vsce package --allow-missing-repository --baseContentUrl https://github.com/lntvan166/cucumber-jump-ext/blob/main/ --baseImagesUrl https://github.com/lntvan166/cucumber-jump-ext/raw/main/"
+    "package:marketplace": "vsce package --allow-missing-repository --baseContentUrl https://github.com/lntvan166/cucumber-jump-ext/blob/main/ --baseImagesUrl https://github.com/lntvan166/cucumber-jump-ext/raw/main/",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/minimatch": "^5.1.2",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.24.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.1"
   },
   "dependencies": {
     "minimatch": "^9.0.3"
