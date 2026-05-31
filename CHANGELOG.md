@@ -4,6 +4,38 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.0] - 2026-05-31
+
+### Added
+
+- **Multi-language support** — step definition navigation now works for **Java, Kotlin, Python, JavaScript, TypeScript, Ruby, C#, Dart**, and Go (new-style `ctx.Step()`) in addition to the original Go StepMap path. Language is **auto-detected** from the `stepsGlob` file extension — no extra config field needed.
+- **Simple two-field config** for all new languages and new-style Go projects: only `featureGlob` + `stepsGlob` are required. `bddFile` is now optional and only needed for the legacy Go StepMap pattern.
+- **`LanguageAdapter` interface** — a clean internal abstraction that parses step definitions and matches steps for each language. Adding a new language is a single new file.
+- **Cucumber Expression support**: `{int}`, `{float}`, `{string}`, `{word}`, `{bigdecimal}`, `{double}`, `{long}`, `{short}`, `{byte}`, `{}` parameter types, plus **optional text** (`cucumber(s)` matches both `cucumber` and `cucumbers`) and **alternation** (`cucumber/banana` matches either word).
+- **Activation events** for all supported step-file languages (`java`, `kotlin`, `python`, `javascript`, `typescript`, `ruby`, `csharp`, `dart`) so the extension activates promptly when a step file is opened.
+- **Dev mode reverse sync** now works for all supported step-file languages, not just Go. Moving the cursor inside a Java/Python/TS/etc. step file syncs the paired `.feature` pane to the matching scenario.
+- **`Show step resolution` diagnostics** — the output now reports how many step files match the configured glob, and shows a `⚠` warning when zero files are found, making misconfiguration immediately visible.
+- **Vitest unit test suite** (69 tests) covering all language adapters and the Cucumber Expression converter.
+
+### Changed
+
+- **`bddFile`** is now **optional** in `cucumberJump.projects` and `cucumberJump.libraries`. Existing configs with `bddFile` continue to work without any changes — the legacy two-level Go path is fully preserved.
+- `stepsGlob` schema description updated to list all supported languages and their file extensions.
+- Extension `description` updated to reflect multi-language support.
+- **Dev mode** error messages are now language-neutral (no longer reference `bdd.go` or `*_steps.go`).
+- **Status bar hint** tooltip updated to say "No step definition found" instead of "No `*_steps.go` match".
+- README rewritten with a supported-languages table, per-language quick setup snippets, and step registration pattern examples for each language.
+- `docs/ai-setup-prompt.txt` updated to guide AI assistants through multi-language configuration.
+
+### Fixed
+
+- **Unanchored string matching** — plain string patterns (e.g. `"the user logs in"`) were previously matched as unanchored regex, causing `"the user logs in to admin"` to match incorrectly. They are now matched as literal anchored strings. Patterns starting with `^` or ending with `$` are still treated as intentional regex.
+- **File scan cap** — `findFiles` calls raised from 200 to 5000 results, preventing silent navigation failures on large monorepos where the target step file was beyond the previous cap.
+- `isCucumberExpression` no longer misidentifies Go regex quantifiers like `\d{3}` as Cucumber Expressions. Requires at least one letter inside `{…}`.
+- Cache invalidation now covers all supported step-file languages (Java, Python, etc.), not just Go and `.feature` files. Edits to step files are reflected immediately without requiring a config change or restart.
+
+[1.0.0]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.31...v1.0.0
+
 ## [0.1.31] - 2026-03-30
 
 ### Added
