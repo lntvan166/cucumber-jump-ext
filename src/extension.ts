@@ -3,6 +3,7 @@ import { scheduleConflictingExtensionHint } from "./conflictHint";
 import { isBddStepDeclarationPosition } from "./bddParser";
 import { findPackForBddFile, findPackForStepsFile } from "./config";
 import { invalidateDocument, invalidateAll } from "./documentCache";
+import { clearInference } from "./inferredConfig";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
 import { isFeatureUri } from "./featureParser";
@@ -229,6 +230,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("cucumberJump")) {
         invalidateAll();
+        clearInference();
       }
     }),
   );

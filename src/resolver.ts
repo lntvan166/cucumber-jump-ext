@@ -196,7 +196,8 @@ export async function explainFeatureStepResolution(
     }
 
     out.push("");
-    out.push(`Pack: ${entry.pack.name ?? "(unnamed)"}  featureGlob=${entry.pack.featureGlob}`);
+    const inferredTag = entry.pack.inferred ? "  (inferred — not saved to settings)" : "";
+    out.push(`Pack: ${entry.pack.name ?? "(unnamed)"}  featureGlob=${entry.pack.featureGlob}${inferredTag}`);
 
     if (!entry.pack.bddFile) {
       out.push(`  stepsGlob=${entry.pack.stepsGlob} (adapter path — no bddFile)`);

@@ -1,12 +1,15 @@
 import { minimatch } from "minimatch";
 import * as path from "path";
 import * as vscode from "vscode";
+import { getInferredPacks } from "./inferredConfig";
 
 export type PackConfig = {
   name?: string;
   featureGlob: string;
   bddFile?: string;
   stepsGlob: string;
+  /** Present and true only on packs produced by workspace inference (never persisted). */
+  inferred?: boolean;
 };
 
 function posixRelative(folder: vscode.WorkspaceFolder, fileUri: vscode.Uri): string {
@@ -43,6 +46,18 @@ export function readPackConfigs(): { projects: PackConfig[]; libraries: PackConf
     projects: config.get<PackConfig[]>("projects") ?? [],
     libraries: config.get<PackConfig[]>("libraries") ?? [],
   };
+}
+
+export function autoConfigureEnabled(): boolean {
+  return vscode.workspace.getConfiguration("cucumberJump").get<boolean>("autoConfigure") ?? true;
+}
+
+function effectivePackConfigs(folder: vscode.WorkspaceFolder): { projects: PackConfig[]; libraries: PackConfig[] } {
+  const cfg = readPackConfigs();
+  if (cfg.projects.length > 0 || cfg.libraries.length > 0 || !autoConfigureEnabled()) {
+    return cfg;
+  }
+  return { projects: getInferredPacks(folder), libraries: [] };
 }
 
 function matchesGlob(relativePosixPath: string, pattern: string): boolean {
@@ -164,7 +179,7 @@ export function getResolutionChainForFeature(featureUri: vscode.Uri): Resolution
     return [];
   }
 
-  const { projects, libraries } = readPackConfigs();
+  const { projects, libraries } = effectivePackConfigs(folder);
   const rel = posixRelative(folder, featureUri);
   const chain: ResolutionEntry[] = [];
 
@@ -315,7 +330,7 @@ export function findPackForStepsFile(stepsUri: vscode.Uri): StepsPackMatch | und
   }
 
   const rel = posixRelative(folder, stepsUri);
-  const { projects, libraries } = readPackConfigs();
+  const { projects, libraries } = effectivePackConfigs(folder);
   const projectMatches = projects.filter((p) => relMatchesStepsGlob(rel, p.stepsGlob, folder));
   if (projectMatches.length > 0) {
     const best = sortPacksByStepsGlobSpecificity(projectMatches)[0];
