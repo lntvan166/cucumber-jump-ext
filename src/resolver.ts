@@ -1,10 +1,13 @@
 import * as vscode from "vscode";
 import { blockMatchesStep, findBlockAtPosition, stepTextFromBlock, type BddStepBlock } from "./bddParser";
 import {
+  autoConfigureEnabled,
   findPackForBddFile,
   findPackForStepsFile,
   getFeatureGlobsForBddReverse,
   getResolutionChainForFeature,
+  getWorkspaceFolderForUri,
+  readPackConfigs,
 } from "./config";
 import { bddUriForEntry, bddUriForStepsEntry } from "./goImplFinder";
 import { getBddBlocks } from "./documentCache";
@@ -17,6 +20,25 @@ import { getStepDefinitions } from "./documentCache";
 import { findDefinitionAtPosition } from "./languageAdapter";
 import type { StepDefinition } from "./languageAdapter";
 import { concretePathFromFeatureAndGlobPattern, workspaceRelativePath } from "./config";
+import { primeInference } from "./inferredConfig";
+
+/**
+ * Primes the inference cache for the workspace folder containing `uri`, but only when no
+ * explicit cucumberJump.projects/libraries are configured and auto-configure is enabled.
+ * `primeInference` caches its result (even an empty one) and dedupes in-flight scans, so
+ * calling this on every resolver entry point costs ~nothing after the first real scan.
+ */
+async function ensureInferenceForUri(uri: vscode.Uri): Promise<void> {
+  const { projects, libraries } = readPackConfigs();
+  if (projects.length > 0 || libraries.length > 0 || !autoConfigureEnabled()) {
+    return;
+  }
+  const folder = getWorkspaceFolderForUri(uri);
+  if (!folder) {
+    return;
+  }
+  await primeInference(folder);
+}
 
 function bddLocationForBlock(uri: vscode.Uri, block: BddStepBlock): vscode.Location {
   const start = new vscode.Position(block.regexLine, block.regexStartColumn);
@@ -62,7 +84,9 @@ async function resolveFromFeatureViaAdapter(
     return undefined;
   }
   const featureRel = workspaceRelativePath(entry.folder, document.uri);
-  const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
+  const stepsGlobConcrete = entry.pack.inferred
+    ? entry.pack.stepsGlob
+    : concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
   const pattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
   const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 5000, token);
 
@@ -108,6 +132,7 @@ export async function resolveFromFeature(
   position: vscode.Position,
   token: vscode.CancellationToken,
 ): Promise<vscode.Location[] | undefined> {
+  await ensureInferenceForUri(document.uri);
   const stepText = getStepTextAtLineNumber(document.getText(), position.line);
   if (!stepText) {
     return undefined;
@@ -175,6 +200,7 @@ export async function explainFeatureStepResolution(
   position: vscode.Position,
   token: vscode.CancellationToken,
 ): Promise<string[]> {
+  await ensureInferenceForUri(document.uri);
   const out: string[] = [];
   const stepText = getStepTextAtLineNumber(document.getText(), position.line);
   if (!stepText) {
@@ -212,10 +238,12 @@ export async function explainFeatureStepResolution(
       }
       out.push(`  Language adapter: .${exts.join(" / .")}`);
       // Report how many step files are visible
-      const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(
-        workspaceRelativePath(entry.folder, document.uri),
-        entry.pack.stepsGlob,
-      );
+      const stepsGlobConcrete = entry.pack.inferred
+        ? entry.pack.stepsGlob
+        : concretePathFromFeatureAndGlobPattern(
+            workspaceRelativePath(entry.folder, document.uri),
+            entry.pack.stepsGlob,
+          );
       const diagPattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
       const diagFiles = await vscode.workspace.findFiles(diagPattern, "**/node_modules/**", 5000, token);
       out.push(`  Step files found: ${diagFiles.length} (glob: ${stepsGlobConcrete})`);
@@ -292,6 +320,7 @@ export async function resolveFeatureUsagesFromStepsAtPosition(
   position: vscode.Position,
   token: vscode.CancellationToken,
 ): Promise<vscode.Location[] | undefined> {
+  await ensureInferenceForUri(document.uri);
   const match = findPackForStepsFile(document.uri);
   if (!match) {
     return undefined;
@@ -415,6 +444,7 @@ export async function resolveImplementationOnly(
   position: vscode.Position,
   token: vscode.CancellationToken,
 ): Promise<vscode.Location | undefined> {
+  await ensureInferenceForUri(document.uri);
   const stepText = getStepTextAtLineNumber(document.getText(), position.line);
   if (!stepText) {
     return undefined;
