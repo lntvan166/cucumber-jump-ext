@@ -4,7 +4,7 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.0.0] - 2026-07-11
+## [2.0.0] - 2026-07-11
 
 ### Added
 
@@ -44,7 +44,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Reverse navigation anchoring** — plain literal patterns no longer run as unanchored regexes when finding feature usages, so `the user logs in` no longer matches `the user logs in to admin` (mirror of the forward-direction fix).
 - The anonymous `{}` Cucumber Expression parameter is now detected end-to-end (the converter supported it, but detection rejected it).
 
-[1.0.0]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.31...v1.0.0
+[2.0.0]: https://github.com/lntvan166/cucumber-jump-ext/compare/v0.1.31...v2.0.0
 
 ## [0.1.31] - 2026-03-30
 

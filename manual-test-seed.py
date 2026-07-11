@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Cucumber Jump 1.0.0 manual-test seeder.
+Cucumber Jump 2.0.0 manual-test seeder.
 
 Creates a throwaway multi-language workspace that exercises every resolution
 path of the extension — all 9 languages, the legacy Go bddFile path, and the
-specific 1.0.0 review fixes (string-literal escapes, C# verbatim strings,
+specific 2.0.0 review fixes (string-literal escapes, C# verbatim strings,
 *.steps.ts / {js,ts} globs, reverse-navigation anchoring, the anonymous {}
 parameter, Dev mode from non-Go step files, loud diagnostics for undetectable
 globs). A TESTPLAN.md checklist is written into the workspace root.
@@ -14,7 +14,7 @@ globs). A TESTPLAN.md checklist is written into the workspace root.
   python3 manual-test-seed.py --clean         # remove the workspace
 
 Then open the folder in VS Code/Cursor with the extension installed
-(cursor --install-extension cucumber-jump-ext-1.0.0.vsix) or point the
+(cursor --install-extension cucumber-jump-ext-2.0.0.vsix) or point the
 Extension Development Host at it, and walk TESTPLAN.md top to bottom.
 """
 import json
@@ -284,10 +284,10 @@ when1<int>('I tap {int} times', (count, context) async {
     "broken/steps/notes.txt": "This project's stepsGlob (broken/steps/**) has no file extension on purpose.\n",
 }
 
-TESTPLAN = """# Cucumber Jump 1.0.0 — manual test plan
+TESTPLAN = """# Cucumber Jump 2.0.0 — manual test plan
 
 Open this folder in VS Code/Cursor with the extension installed
-(`cursor --install-extension cucumber-jump-ext-1.0.0.vsix`) or via the
+(`cursor --install-extension cucumber-jump-ext-2.0.0.vsix`) or via the
 Extension Development Host. CodeLens + status bar hint are pre-enabled in
 `.vscode/settings.json`. Work top to bottom; every row should pass.
 
@@ -369,7 +369,7 @@ def main() -> None:
     print(f"  - TESTPLAN.md with the 28-point manual checklist")
     print()
     print("Next:")
-    print(f"  1. cursor --install-extension cucumber-jump-ext-1.0.0.vsix   (or use the Extension Dev Host)")
+    print(f"  1. cursor --install-extension cucumber-jump-ext-2.0.0.vsix   (or use the Extension Dev Host)")
     print(f"  2. cursor {WS}")
     print(f"  3. Walk {os.path.join(WS, 'TESTPLAN.md')} top to bottom")
 
