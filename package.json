@@ -2,7 +2,7 @@
   "name": "cucumber-jump-ext",
   "displayName": "Cucumber Jump",
   "description": "Navigate between Gherkin .feature files and step definitions across Java, Kotlin, Python, JavaScript, TypeScript, Ruby, C#, Dart, and Go.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "publisher": "lntvan166",
   "author": "lntvan166",
   "repository": {

@@ -4,7 +4,7 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [2.1.0] - 2026-07-12
 
 ### Added
 
@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Get Started walkthrough** (three steps: set up, jump, extras).
 - **GitHub Actions CI** — tests + compile on every push/PR.
 - `Show step resolution` labels inferred packs with `(inferred — not saved to settings)`.
+
+[2.1.0]: https://github.com/lntvan166/cucumber-jump-ext/compare/v2.0.0...v2.1.0
 
 ## [2.0.0] - 2026-07-11
 
