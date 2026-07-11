@@ -7,6 +7,7 @@ import { clearInference } from "./inferredConfig";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
 import { isFeatureUri } from "./featureParser";
+import { registerOnboarding } from "./onboarding";
 import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly, resolveFeatureUsagesFromStepsAtPosition } from "./resolver";
 import { registerStepUi } from "./stepUi";
 
@@ -61,6 +62,7 @@ function logDefinitionProviderError(err: unknown): void {
 export function activate(context: vscode.ExtensionContext): void {
   registerStepUi(context);
   registerDevMode(context);
+  registerOnboarding(context);
   scheduleConflictingExtensionHint(context);
   const definitionProvider: vscode.DefinitionProvider = {
     provideDefinition: async (document, position, token) => {

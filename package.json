@@ -161,6 +161,14 @@
         "title": "Cucumber Jump: Show step resolution"
       },
       {
+        "command": "cucumberJump.createConfiguration",
+        "title": "Cucumber Jump: Create configuration (scan workspace)"
+      },
+      {
+        "command": "cucumberJump.rescanWorkspace",
+        "title": "Cucumber Jump: Rescan workspace for step definitions"
+      },
+      {
         "command": "cucumberJump.openDevMode",
         "title": "Cucumber Jump: Open Dev mode (code left, feature right)"
       },
