@@ -12,6 +12,7 @@ globs). A TESTPLAN.md checklist is written into the workspace root.
   python3 manual-test-seed.py                 # seed  ~/cucumber-jump-manual-test
   python3 manual-test-seed.py /path/to/ws     # seed a custom workspace dir
   python3 manual-test-seed.py --clean         # remove the workspace
+  python3 manual-test-seed.py --no-config      # seed WITHOUT cucumberJump.projects (zero-setup testing)
 
 Then open the folder in VS Code/Cursor with the extension installed
 (cursor --install-extension cucumber-jump-ext-2.0.0.vsix) or point the
@@ -24,6 +25,7 @@ import sys
 
 argv = sys.argv[1:]
 CLEAN = "--clean" in argv
+NO_CONFIG = "--no-config" in argv
 pos = [a for a in argv if not a.startswith("--")]
 WS = os.path.abspath(os.path.expanduser(pos[0])) if pos else os.path.expanduser("~/cucumber-jump-manual-test")
 
@@ -346,14 +348,30 @@ F12 (or the "Implementation" CodeLens) on each step line:
 | 27 | In OrderSteps.java, move the caret between methods | right pane follows to the matching feature line |
 | 28 | Status bar `DEV ·` quick-pick | says "Focus step file (left)" — no "Go" wording |
 
+## Zero-setup (seed with `python3 manual-test-seed.py --no-config`)
+
+| # | Action | Expect |
+|---|---|---|
+| 29 | Open java/features/orders.feature, wait ~2s, F12 on `I have 3 orders` | jumps to OrderSteps.java with NO configuration present |
+| 30 | Same session | one toast: "Cucumber Jump configured itself — N project(s) detected" with Save / Adjust… / Don't ask again |
+| 31 | Toast → "Save to settings" | .vscode/settings.json gains cucumberJump.projects matching the seeded layout (go-legacy is NOT detected — bddFile inference is out of scope) |
+| 32 | Command "Create configuration (scan workspace)" (fresh --no-config seed) | quick-pick lists detected projects with `matched X/Y steps` evidence, all pre-checked; confirming writes settings and demonstrates a jump |
+| 33 | Command "Rescan workspace for step definitions" | reruns inference and reports the project count |
+| 34 | "Show step resolution" on a zero-setup jump | pack line ends with `(inferred — not saved to settings)` |
+| 35 | Set `cucumberJump.autoConfigure: false` (fresh --no-config seed) | no inference, no toast; F12 does nothing (as before 2.1.0) |
+| 36 | "Welcome: Open Walkthrough…" → Get started with Cucumber Jump | three steps render; Create configuration button works |
+
 Clean up afterwards: `python3 manual-test-seed.py --clean`
 """
 
 
 def main() -> None:
     os.makedirs(os.path.join(WS, ".vscode"), exist_ok=True)
+    settings = dict(SETTINGS)
+    if NO_CONFIG:
+        settings.pop("cucumberJump.projects", None)
     with open(os.path.join(WS, ".vscode", "settings.json"), "w") as f:
-        json.dump(SETTINGS, f, indent=2)
+        json.dump(settings, f, indent=2)
 
     for rel, content in FILES.items():
         path = os.path.join(WS, rel)
@@ -365,8 +383,8 @@ def main() -> None:
         f.write(TESTPLAN)
 
     print(f"Seeded {len(FILES) + 2} files into {WS}")
-    print(f"  - 11 cucumberJump projects across 9 languages (+ legacy Go, + a broken-glob project)")
-    print(f"  - TESTPLAN.md with the 28-point manual checklist")
+    print(f"  - cucumberJump.projects: {'OMITTED (zero-setup mode)' if NO_CONFIG else '11 projects'}")
+    print(f"  - TESTPLAN.md with the 36-point manual checklist")
     print()
     print("Next:")
     print(f"  1. cursor --install-extension cucumber-jump-ext-2.0.0.vsix   (or use the Extension Dev Host)")

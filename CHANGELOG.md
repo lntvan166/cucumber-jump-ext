@@ -4,6 +4,17 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Zero-setup navigation** — with no `cucumberJump` configuration, opening a `.feature` file triggers a one-time background scan that matches your Gherkin steps against step definitions (all 9 languages) and navigation just works. A single toast offers to save the detected projects to settings. Disable with `cucumberJump.autoConfigure: false`.
+- **`Cucumber Jump: Create configuration (scan workspace)`** — detects projects with match evidence, shows them for confirmation, writes `.vscode/settings.json`, then demonstrates a live jump. Falls back to a template when nothing is detected.
+- **`Cucumber Jump: Rescan workspace for step definitions`** command.
+- **Get Started walkthrough** (three steps: set up, jump, extras).
+- **GitHub Actions CI** — tests + compile on every push/PR.
+- `Show step resolution` labels inferred packs with `(inferred — not saved to settings)`.
+
 ## [2.0.0] - 2026-07-11
 
 ### Added
