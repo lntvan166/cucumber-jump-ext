@@ -42,6 +42,42 @@ describe('parseCsharpStepDefinitions', () => {
   it('ignores non-attribute lines', () => {
     expect(parseCsharpStepDefinitions('public void SomeMethod() {}')).toHaveLength(0);
   });
+
+  it('unescapes regex-style attributes so \\\\d in source becomes \\d', () => {
+    // C# source: [Given("^I have (\\d+) cukes$")]
+    const content = [
+      '[Given("^I have (\\\\d+) cukes$")]',
+      'public void IHaveCukes(int n) {}',
+    ].join('\n');
+    const defs = parseCsharpStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I have (\\d+) cukes$');
+    expect(csharpAdapter.matchesStep(defs[0], 'I have 42 cukes', 'i have 42 cukes')).toBe(true);
+  });
+
+  it('parses verbatim string attributes [Given(@"...")]', () => {
+    // C# source: [Given(@"^I have (\d+) cukes$")] — backslashes are literal in verbatim strings
+    const content = [
+      '[Given(@"^I have (\\d+) cukes$")]',
+      'public void IHaveCukes(int n) {}',
+    ].join('\n');
+    const defs = parseCsharpStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I have (\\d+) cukes$');
+    expect(defs[0].implFunctionName).toBe('IHaveCukes');
+    expect(csharpAdapter.matchesStep(defs[0], 'I have 42 cukes', 'i have 42 cukes')).toBe(true);
+  });
+
+  it('unescapes doubled quotes inside verbatim strings', () => {
+    // C# source: [When(@"I say ""hi""")]
+    const content = [
+      '[When(@"I say ""hi""")]',
+      'public void ISayHi() {}',
+    ].join('\n');
+    const defs = parseCsharpStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('I say "hi"');
+  });
 });
 
 describe('csharpAdapter.matchesStep', () => {

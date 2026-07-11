@@ -15,6 +15,9 @@ describe('isCucumberExpression', () => {
     expect(isCucumberExpression('there are \\d{3} items')).toBe(false);
     expect(isCucumberExpression('price is \\d{1,3}\\.\\d{2}')).toBe(false);
   });
+  it('returns true for the anonymous {} parameter', () => {
+    expect(isCucumberExpression('I see {}')).toBe(true);
+  });
   it('returns true for optional text group', () => {
     expect(isCucumberExpression('I have {int} cucumber(s)')).toBe(true);
     expect(isCucumberExpression('the button is (not )?visible')).toBe(true);

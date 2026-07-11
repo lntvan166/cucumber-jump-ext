@@ -74,3 +74,14 @@ describe('pythonAdapter.matchesStep', () => {
     expect(pythonAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('pythonAdapter escaped quotes', () => {
+  it("unescapes \\' inside single-quoted patterns", () => {
+    // Python source: @given('I can\'t stop')
+    const content = ["@given('I can\\'t stop')", 'def step_impl(context):'].join('\n');
+    const defs = parsePythonStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe("I can't stop");
+    expect(pythonAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
+  });
+});

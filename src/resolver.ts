@@ -12,11 +12,10 @@ import { findFeatureUsages } from "./featureFinder";
 import { getStepTextAtLineNumber, normalizeStepText } from "./featureParser";
 import { findImplementationLocation } from "./goImplFinder";
 import { isSameLocalFile } from "./sameFileUri";
-import { getAdapterForGlob, getAdapterForUri } from "./adapterRegistry";
+import { extensionsForGlob, getAdapterForGlob, getAdapterForUri } from "./adapterRegistry";
 import { getStepDefinitions } from "./documentCache";
 import { findDefinitionAtPosition } from "./languageAdapter";
 import type { StepDefinition } from "./languageAdapter";
-import { isCucumberExpression, cucumberExpressionToRegex } from "./adapters/cucumberExpression";
 import { concretePathFromFeatureAndGlobPattern, workspaceRelativePath } from "./config";
 
 function bddLocationForBlock(uri: vscode.Uri, block: BddStepBlock): vscode.Location {
@@ -59,6 +58,9 @@ async function resolveFromFeatureViaAdapter(
   token: vscode.CancellationToken,
 ): Promise<vscode.Location[] | undefined> {
   const adapter = getAdapterForGlob(entry.pack.stepsGlob);
+  if (!adapter) {
+    return undefined;
+  }
   const featureRel = workspaceRelativePath(entry.folder, document.uri);
   const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
   const pattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
@@ -198,6 +200,16 @@ export async function explainFeatureStepResolution(
 
     if (!entry.pack.bddFile) {
       out.push(`  stepsGlob=${entry.pack.stepsGlob} (adapter path — no bddFile)`);
+      const exts = extensionsForGlob(entry.pack.stepsGlob);
+      if (!getAdapterForGlob(entry.pack.stepsGlob)) {
+        out.push(
+          exts.length === 0
+            ? "  ⚠ No file extension detectable in stepsGlob — add one (e.g. **/*.steps.ts) so the language adapter can be selected."
+            : `  ⚠ No language adapter for extension(s) .${exts.join(" / .")} — supported: .go .java .kt .py .ts .js .rb .cs .dart (one language per glob).`,
+        );
+        continue;
+      }
+      out.push(`  Language adapter: .${exts.join(" / .")}`);
       // Report how many step files are visible
       const stepsGlobConcrete = concretePathFromFeatureAndGlobPattern(
         workspaceRelativePath(entry.folder, document.uri),
@@ -313,6 +325,9 @@ export async function resolveFeatureUsagesFromStepsAtPosition(
 
   // ── New adapter path: no bddFile ───────────────────────────────────────
   const adapter = getAdapterForUri(document.uri);
+  if (!adapter) {
+    return undefined;
+  }
   const defs = await getStepDefinitions(document.uri, adapter);
   const def = findDefinitionAtPosition(defs, position.line);
   if (!def) {
@@ -322,18 +337,13 @@ export async function resolveFeatureUsagesFromStepsAtPosition(
   const bddMatch = { entry: match.entry, fromProject: match.fromProject };
   const globs = getFeatureGlobsForBddReverse(bddMatch);
 
-  let regexPattern: string | undefined;
-  if (isCucumberExpression(def.pattern)) {
-    try {
-      regexPattern = cucumberExpressionToRegex(def.pattern).source;
-    } catch {
-      regexPattern = undefined;
-    }
-  } else {
-    regexPattern = def.pattern;
-  }
-
-  return findFeatureUsages(match.entry.folder, globs, def.pattern, regexPattern, token);
+  return findFeatureUsages(
+    match.entry.folder,
+    globs,
+    def.pattern,
+    adapter.reverseRegexForPattern(def.pattern),
+    token,
+  );
 }
 
 export async function resolveFromBdd(
@@ -418,6 +428,10 @@ export async function resolveImplementationOnly(
     }
 
     if (!entry.pack.bddFile) {
+      const result = await resolveFromFeatureViaAdapter(entry, document, stepText, normalized, token);
+      if (result && result.length > 0) {
+        return result[0];
+      }
       continue;
     }
 

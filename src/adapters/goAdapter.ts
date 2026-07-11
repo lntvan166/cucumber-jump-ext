@@ -1,9 +1,10 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { normalizeStepText } from '../featureParser';
 import { isCucumberExpression, cucumberExpressionToRegex } from './cucumberExpression';
+import { unescapeStringLiteral } from './stepMatch';
 import { regexMatchesRawStep } from '../bddParser';
 
-const STEP_REGEX = /\.Step\s*\(\s*(?:`([^`]*)`|"([^"]*)")\s*,\s*([a-zA-Z_][a-zA-Z0-9_]*|func\b)/;
+const STEP_REGEX = /\.Step\s*\(\s*(?:`([^`]*)`|"((?:[^"\\]|\\.)*)")\s*,\s*([a-zA-Z_][a-zA-Z0-9_]*|func\b)/;
 
 export function parseGoStepDefinitions(content: string): StepDefinition[] {
   const lines = content.split(/\r?\n/);
@@ -16,21 +17,21 @@ export function parseGoStepDefinitions(content: string): StepDefinition[] {
       continue;
     }
 
-    const pattern = match[1] ?? match[2];
+    // Backtick raw strings are byte-for-byte; interpreted "" strings need unescaping
+    const pattern = match[1] !== undefined ? match[1] : unescapeStringLiteral(match[2]);
     const handler = match[3];
 
     // Find positions of the quote characters
-    let quoteChar: string;
     let quoteIdx: number;
+    let patternEndCol: number;
     if (match[1] !== undefined) {
-      quoteChar = '`';
       quoteIdx = line.indexOf('`');
+      patternEndCol = line.indexOf('`', quoteIdx + 1);
     } else {
-      quoteChar = '"';
       quoteIdx = line.indexOf('"');
+      patternEndCol = quoteIdx + 1 + match[2].length;
     }
     const patternStartCol = quoteIdx;
-    const patternEndCol = line.indexOf(quoteChar, quoteIdx + 1);
 
     const def: StepDefinition = {
       pattern,
@@ -74,4 +75,6 @@ export const goAdapter: LanguageAdapter = {
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean {
     return stepMatches(def.pattern, rawStep, normalizedStep);
   },
+  // godog patterns are always regexes, anchored or not
+  reverseRegexForPattern: (pattern: string) => pattern,
 };

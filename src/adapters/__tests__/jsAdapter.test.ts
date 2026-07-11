@@ -66,3 +66,28 @@ describe('jsAdapter.matchesStep', () => {
     expect(jsAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('jsAdapter escaped quotes', () => {
+  it("unescapes \\' inside single-quoted patterns", () => {
+    // JS source: Given('I can\'t stop', () => {})
+    const content = "Given('I can\\'t stop', () => {})";
+    const defs = parseJsStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe("I can't stop");
+    expect(jsAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
+  });
+
+  it('unescapes \\" inside double-quoted patterns', () => {
+    // JS source: When("I click \"OK\"", () => {})
+    const content = 'When("I click \\"OK\\"", () => {})';
+    const defs = parseJsStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('I click "OK"');
+  });
+});
+
+describe('jsAdapter reverse regex', () => {
+  it('returns undefined for plain literal patterns', () => {
+    expect(jsAdapter.reverseRegexForPattern('the user logs in')).toBeUndefined();
+  });
+});

@@ -62,3 +62,14 @@ describe('dartAdapter.matchesStep', () => {
     expect(dartAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('dartAdapter escaped quotes', () => {
+  it("unescapes \\' inside single-quoted patterns", () => {
+    // Dart source: given1('I can\'t stop', (ctx) async {});
+    const content = "given1('I can\\'t stop', (ctx) async {});";
+    const defs = parseDartStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe("I can't stop");
+    expect(dartAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
+  });
+});

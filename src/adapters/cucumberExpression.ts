@@ -15,8 +15,8 @@ export function isCucumberExpression(pattern: string): boolean {
   if (pattern.startsWith('^') || pattern.endsWith('$')) {
     return false;
   }
-  // {Type} parameter
-  if (/\{[a-zA-Z]\w*\}/.test(pattern)) {
+  // {Type} parameter, or the anonymous {} parameter
+  if (/\{[a-zA-Z]\w*\}|\{\}/.test(pattern)) {
     return true;
   }
   // (optional) text group

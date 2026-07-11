@@ -1,8 +1,9 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
-import { normalizeStepText } from '../featureParser';
-import { isCucumberExpression, cucumberExpressionToRegex } from './cucumberExpression';
+import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
 
-const ATTRIBUTE_REGEX = /^\s*\[\s*(Given|When|Then|And|But|StepDefinition)\s*\(\s*"((?:[^"\\]|\\.)*)"\s*\)\s*\]/;
+// Group 2: verbatim prefix (@" / $@" / @$"), group 3: verbatim content ("" = escaped quote)
+// Group 4: regular string content (backslash escapes)
+const ATTRIBUTE_REGEX = /^\s*\[\s*(Given|When|Then|And|But|StepDefinition)\s*\(\s*(?:(@\$?|\$@)"((?:[^"]|"")*)"|\$?"((?:[^"\\]|\\.)*)")\s*\)\s*\]/;
 const METHOD_REGEX = /(?:public|private|protected|internal|static|\s)+\w+\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/;
 
 export function parseCsharpStepDefinitions(content: string): StepDefinition[] {
@@ -16,7 +17,10 @@ export function parseCsharpStepDefinitions(content: string): StepDefinition[] {
       continue;
     }
 
-    const pattern = match[2];
+    const pattern =
+      match[3] !== undefined
+        ? match[3].replace(/""/g, '"')
+        : unescapeStringLiteral(match[4]);
 
     const firstQuote = line.indexOf('"');
     const lastQuote = line.lastIndexOf('"');
@@ -48,29 +52,10 @@ export function parseCsharpStepDefinitions(content: string): StepDefinition[] {
   return defs;
 }
 
-function stepMatches(pattern: string, rawStep: string, normalizedStep: string): boolean {
-  if (normalizeStepText(pattern) === normalizedStep) {
-    return true;
-  }
-  if (isCucumberExpression(pattern)) {
-    try {
-      return cucumberExpressionToRegex(pattern).test(rawStep.trim());
-    } catch {
-      return false;
-    }
-  }
-  // If pattern is already anchored with ^ or $, treat as intentional regex
-  if (pattern.startsWith('^') || pattern.endsWith('$')) {
-    try { return new RegExp(pattern).test(rawStep.trim()); } catch { return false; }
-  }
-  // Otherwise treat as a literal string — escape special chars and anchor it
-  const escaped = pattern.replace(/[.*+?^$|{}[\]\\()]/g, '\\$&');
-  try { return new RegExp(`^${escaped}$`, 'i').test(rawStep.trim()); } catch { return false; }
-}
-
 export const csharpAdapter: LanguageAdapter = {
   parseStepDefinitions: parseCsharpStepDefinitions,
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean {
-    return stepMatches(def.pattern, rawStep, normalizedStep);
+    return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
+  reverseRegexForPattern: defaultReverseRegex,
 };

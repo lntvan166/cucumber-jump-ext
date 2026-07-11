@@ -46,6 +46,31 @@ describe('parseGoStepDefinitions', () => {
   it('ignores non-step lines', () => {
     expect(parseGoStepDefinitions('someOtherFunc()')).toHaveLength(0);
   });
+
+  it('unescapes double-quoted (interpreted) string patterns', () => {
+    // Go source: ctx.Step("^I eat (\\d+) cukes$", iEat)
+    const content = 'ctx.Step("^I eat (\\\\d+) cukes$", iEat)';
+    const defs = parseGoStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I eat (\\d+) cukes$');
+    expect(goAdapter.matchesStep(defs[0], 'I eat 3 cukes', 'i eat 3 cukes')).toBe(true);
+  });
+
+  it('handles escaped quotes inside double-quoted patterns', () => {
+    // Go source: ctx.Step("^I say \"hi\"$", say)
+    const content = 'ctx.Step("^I say \\"hi\\"$", say)';
+    const defs = parseGoStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I say "hi"$');
+    expect(defs[0].implFunctionName).toBe('say');
+  });
+
+  it('keeps backtick (raw) string patterns byte-for-byte', () => {
+    const content = 'ctx.Step(`^I eat (\\d+) cukes$`, iEat)';
+    const defs = parseGoStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I eat (\\d+) cukes$');
+  });
 });
 
 describe('goAdapter.matchesStep', () => {
@@ -67,5 +92,11 @@ describe('goAdapter.matchesStep', () => {
 
   it('matches Cucumber Expression', () => {
     expect(goAdapter.matchesStep(makeDef('I have {int} cucumbers'), 'I have 5 cucumbers', 'i have 5 cucumbers')).toBe(true);
+  });
+});
+
+describe('goAdapter reverse regex', () => {
+  it('treats every pattern as a regex, even unanchored ones', () => {
+    expect(goAdapter.reverseRegexForPattern('I have (\\d+) cukes')).toBe('I have (\\d+) cukes');
   });
 });

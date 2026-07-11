@@ -11,6 +11,8 @@ export type StepDefinition = {
 export interface LanguageAdapter {
   parseStepDefinitions(content: string): StepDefinition[];
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean;
+  /** Regex for reverse navigation, or undefined when normalized equality suffices. */
+  reverseRegexForPattern(pattern: string): string | undefined;
 }
 
 export function findDefinitionAtPosition(

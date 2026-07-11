@@ -20,20 +20,44 @@ const EXT_MAP: Record<string, LanguageAdapter> = {
 };
 
 /**
- * Returns the adapter for the given stepsGlob pattern by inspecting its file extension.
- * Examples: "**\/*Steps.java" → javaAdapter, "**\/*_steps.go" → goAdapter
- * Falls back to goAdapter for unknown extensions.
+ * Extracts candidate file extensions from a stepsGlob: the text after the LAST
+ * dot of the last path segment, with `{a,b}` brace groups expanded.
+ * Examples: "**\/*.steps.ts" → ["ts"], "e2e/**\/*.{js,ts}" → ["js","ts"],
+ * "**\/steps/**" → [].
  */
-export function getAdapterForGlob(stepsGlob: string): LanguageAdapter {
-  const m = stepsGlob.match(/\.([a-zA-Z]+)(?:[^a-zA-Z]|$)/);
-  const ext = m ? m[1].toLowerCase() : '';
-  return EXT_MAP[ext] ?? goAdapter;
+export function extensionsForGlob(stepsGlob: string): string[] {
+  const lastSegment = stepsGlob.split('/').pop() ?? '';
+  const dot = lastSegment.lastIndexOf('.');
+  if (dot === -1) {
+    return [];
+  }
+  const rawExt = lastSegment.slice(dot + 1);
+  const brace = rawExt.match(/^\{([^}]*)\}$/);
+  const candidates = brace ? brace[1].split(',') : [rawExt];
+  return candidates
+    .map((e) => e.trim().replace(/^\./, '').toLowerCase())
+    .filter((e) => /^[a-z0-9]+$/.test(e));
+}
+
+/**
+ * Returns the adapter for the given stepsGlob pattern by inspecting its file
+ * extension(s). Returns undefined when no extension is detectable, the
+ * extension is unknown, or a brace glob mixes different languages — callers
+ * must surface that loudly instead of guessing.
+ */
+export function getAdapterForGlob(stepsGlob: string): LanguageAdapter | undefined {
+  const adapters = new Set(
+    extensionsForGlob(stepsGlob)
+      .map((ext) => EXT_MAP[ext])
+      .filter((a): a is LanguageAdapter => a !== undefined),
+  );
+  return adapters.size === 1 ? [...adapters][0] : undefined;
 }
 
 /**
  * Returns the adapter for a file by its extension (used for reverse navigation).
  */
-export function getAdapterForUri(uri: { fsPath: string }): LanguageAdapter {
+export function getAdapterForUri(uri: { fsPath: string }): LanguageAdapter | undefined {
   const ext = uri.fsPath.split('.').pop()?.toLowerCase() ?? '';
-  return EXT_MAP[ext] ?? goAdapter;
+  return EXT_MAP[ext];
 }

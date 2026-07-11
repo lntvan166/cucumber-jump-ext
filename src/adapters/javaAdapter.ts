@@ -1,6 +1,5 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
-import { normalizeStepText } from '../featureParser';
-import { isCucumberExpression, cucumberExpressionToRegex } from './cucumberExpression';
+import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
 
 const ANNOTATION_REGEX = /^\s*@(Given|When|Then|And|But)\s*\(\s*"((?:[^"\\]|\\.)*)"\s*\)/;
 const METHOD_REGEX = /(?:public|private|protected|override\s+)*(?:void|fun|\w+)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
@@ -16,7 +15,7 @@ export function parseJavaStepDefinitions(content: string): StepDefinition[] {
       continue;
     }
 
-    const pattern = match[2];
+    const pattern = unescapeStringLiteral(match[2]);
 
     // Find positions of the first and last " on the annotation line
     const firstQuote = line.indexOf('"');
@@ -49,29 +48,10 @@ export function parseJavaStepDefinitions(content: string): StepDefinition[] {
   return defs;
 }
 
-function stepMatches(pattern: string, rawStep: string, normalizedStep: string): boolean {
-  if (normalizeStepText(pattern) === normalizedStep) {
-    return true;
-  }
-  if (isCucumberExpression(pattern)) {
-    try {
-      return cucumberExpressionToRegex(pattern).test(rawStep.trim());
-    } catch {
-      return false;
-    }
-  }
-  // If pattern is already anchored with ^ or $, treat as intentional regex
-  if (pattern.startsWith('^') || pattern.endsWith('$')) {
-    try { return new RegExp(pattern).test(rawStep.trim()); } catch { return false; }
-  }
-  // Otherwise treat as a literal string — escape special chars and anchor it
-  const escaped = pattern.replace(/[.*+?^$|{}[\]\\()]/g, '\\$&');
-  try { return new RegExp(`^${escaped}$`, 'i').test(rawStep.trim()); } catch { return false; }
-}
-
 export const javaAdapter: LanguageAdapter = {
   parseStepDefinitions: parseJavaStepDefinitions,
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean {
-    return stepMatches(def.pattern, rawStep, normalizedStep);
+    return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
+  reverseRegexForPattern: defaultReverseRegex,
 };

@@ -54,6 +54,30 @@ describe('parseJavaStepDefinitions', () => {
   it('ignores non-annotation lines', () => {
     expect(parseJavaStepDefinitions('public void someMethod() {}')).toHaveLength(0);
   });
+
+  it('unescapes regex-style annotations so \\\\d in source becomes \\d', () => {
+    // Java source: @Given("^I have (\\d+) cukes$")
+    const content = [
+      '@Given("^I have (\\\\d+) cukes$")',
+      'public void iHaveCukes(int n) {}',
+    ].join('\n');
+    const defs = parseJavaStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('^I have (\\d+) cukes$');
+    expect(javaAdapter.matchesStep(defs[0], 'I have 42 cukes', 'i have 42 cukes')).toBe(true);
+  });
+
+  it('unescapes escaped quotes inside annotations', () => {
+    // Java source: @When("I click \"OK\"")
+    const content = [
+      '@When("I click \\"OK\\"")',
+      'public void iClickOk() {}',
+    ].join('\n');
+    const defs = parseJavaStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe('I click "OK"');
+    expect(javaAdapter.matchesStep(defs[0], 'I click "OK"', 'i click "ok"')).toBe(true);
+  });
 });
 
 describe('javaAdapter.matchesStep', () => {

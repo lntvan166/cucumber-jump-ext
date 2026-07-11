@@ -56,3 +56,14 @@ describe('rubyAdapter.matchesStep', () => {
     expect(rubyAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('rubyAdapter escaped quotes', () => {
+  it("unescapes \\' inside single-quoted patterns", () => {
+    // Ruby source: Given('I can\'t stop') do
+    const content = "Given('I can\\'t stop') do";
+    const defs = parseRubyStepDefinitions(content);
+    expect(defs).toHaveLength(1);
+    expect(defs[0].pattern).toBe("I can't stop");
+    expect(rubyAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
+  });
+});

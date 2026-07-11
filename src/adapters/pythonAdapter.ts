@@ -1,8 +1,7 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
-import { normalizeStepText } from '../featureParser';
-import { isCucumberExpression, cucumberExpressionToRegex } from './cucumberExpression';
+import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
 
-const DECORATOR_REGEX = /^\s*@(given|when|then|step)\s*\(\s*(?:'([^']*)'|"([^"]*)")\s*\)/i;
+const DECORATOR_REGEX = /^\s*@(given|when|then|step)\s*\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")\s*\)/i;
 const DEF_REGEX = /^\s*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
 
 export function parsePythonStepDefinitions(content: string): StepDefinition[] {
@@ -16,7 +15,7 @@ export function parsePythonStepDefinitions(content: string): StepDefinition[] {
       continue;
     }
 
-    const pattern = match[2] ?? match[3];
+    const pattern = unescapeStringLiteral(match[2] ?? match[3]);
 
     // Find positions of the quote characters
     const isDouble = match[2] === undefined;
@@ -51,29 +50,10 @@ export function parsePythonStepDefinitions(content: string): StepDefinition[] {
   return defs;
 }
 
-function stepMatches(pattern: string, rawStep: string, normalizedStep: string): boolean {
-  if (normalizeStepText(pattern) === normalizedStep) {
-    return true;
-  }
-  if (isCucumberExpression(pattern)) {
-    try {
-      return cucumberExpressionToRegex(pattern).test(rawStep.trim());
-    } catch {
-      return false;
-    }
-  }
-  // If pattern is already anchored with ^ or $, treat as intentional regex
-  if (pattern.startsWith('^') || pattern.endsWith('$')) {
-    try { return new RegExp(pattern).test(rawStep.trim()); } catch { return false; }
-  }
-  // Otherwise treat as a literal string — escape special chars and anchor it
-  const escaped = pattern.replace(/[.*+?^$|{}[\]\\()]/g, '\\$&');
-  try { return new RegExp(`^${escaped}$`, 'i').test(rawStep.trim()); } catch { return false; }
-}
-
 export const pythonAdapter: LanguageAdapter = {
   parseStepDefinitions: parsePythonStepDefinitions,
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean {
-    return stepMatches(def.pattern, rawStep, normalizedStep);
+    return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
+  reverseRegexForPattern: defaultReverseRegex,
 };
