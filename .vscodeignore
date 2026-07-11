@@ -4,3 +4,10 @@ src/**
 tsconfig.json
 .gitignore
 **/*.map
+CLAUDE.md
+docs/**
+vitest.config.ts
+out/**/__tests__/**
+assets/demo*.gif
+.qodo/**
+*.vsix

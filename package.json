@@ -16,24 +16,21 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Testing"
+  ],
+  "keywords": [
+    "cucumber",
+    "gherkin",
+    "bdd",
+    "step definitions",
+    "godog"
   ],
   "activationEvents": [
-    "onLanguage:go",
-    "onLanguage:java",
-    "onLanguage:kotlin",
-    "onLanguage:python",
-    "onLanguage:javascript",
-    "onLanguage:typescript",
-    "onLanguage:ruby",
-    "onLanguage:csharp",
-    "onLanguage:dart",
     "onLanguage:gherkin",
     "onLanguage:cucumber",
     "onLanguage:feature",
-    "onFileSystem:vscode-remote",
-    "workspaceContains:**/*.feature",
-    "onStartupFinished"
+    "workspaceContains:**/*.feature"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -144,11 +141,11 @@
       },
       {
         "command": "cucumberJump.goToStepRegistry",
-        "title": "Cucumber Jump: Go to Step Registry"
+        "title": "Cucumber Jump: Go to step registry"
       },
       {
         "command": "cucumberJump.goToImplementation",
-        "title": "Cucumber Jump: Go to Implementation"
+        "title": "Cucumber Jump: Go to implementation"
       },
       {
         "command": "cucumberJump.peekStepTargets",
@@ -160,7 +157,7 @@
       },
       {
         "command": "cucumberJump.openDevMode",
-        "title": "Cucumber Jump: Open Dev mode (Go left, feature right)"
+        "title": "Cucumber Jump: Open Dev mode (code left, feature right)"
       },
       {
         "command": "cucumberJump.toggleDevMode",
