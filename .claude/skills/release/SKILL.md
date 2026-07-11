@@ -34,10 +34,12 @@ auto-update the extension — skipping it strands them on old versions.
    Sanity-check the artifact: `unzip -l cucumber-jump-ext-<version>.vsix`
    should be ~70 files / well under 1 MB and contain no `CLAUDE.md`, `docs/`,
    `__tests__`, or GIFs.
-6. **Smoke test.** Install the vsix into a clean VS Code
-   (`code --install-extension cucumber-jump-ext-<version>.vsix`) and verify at
-   least: one `.feature` → step definition jump (any language), one reverse
-   jump, and Dev mode toggle. This is manual — ask the user to confirm.
+6. **Smoke test.** Run `python3 manual-test-seed.py` to seed
+   `~/cucumber-jump-manual-test` (a multi-language workspace with a
+   `TESTPLAN.md` checklist), install the vsix
+   (`code --install-extension cucumber-jump-ext-<version>.vsix`), open the
+   seeded folder, and walk the checklist. This is manual — ask the user to
+   confirm. Clean up with `python3 manual-test-seed.py --clean`.
 7. **Publish both registries from the SAME vsix:**
    ```bash
    npx vsce publish --packagePath cucumber-jump-ext-<version>.vsix

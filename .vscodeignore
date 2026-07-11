@@ -11,3 +11,4 @@ out/**/__tests__/**
 assets/demo*.gif
 .qodo/**
 *.vsix
+manual-test-seed.py
