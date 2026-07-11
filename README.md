@@ -1,5 +1,7 @@
 # Cucumber Jump
 
+[![CI](https://github.com/lntvan166/cucumber-jump-ext/actions/workflows/ci.yml/badge.svg)](https://github.com/lntvan166/cucumber-jump-ext/actions/workflows/ci.yml)
+
 **Cucumber Jump** connects **Gherkin `.feature` files** with step definitions across **Java, Kotlin, Python, JavaScript, TypeScript, Ruby, C#, Dart, and Go** — navigate from any step line straight to the implementation and back.
 
 Install from the **Visual Studio Marketplace** (VS Code) or your editor's extension panel — search **Cucumber Jump** (publisher **lntvan166**). Open a workspace that contains both `.feature` files and the configured step paths, then add the settings below.
