@@ -72,8 +72,9 @@ The branch point is in `resolver.ts`: `if (entry.pack.bddFile)` routes to the le
 | File | Role |
 |---|---|
 | `src/languageAdapter.ts` | `StepDefinition` type, `LanguageAdapter` interface, `findDefinitionAtPosition` util |
-| `src/adapterRegistry.ts` | Maps file extension (from `stepsGlob`) → `LanguageAdapter` instance |
-| `src/adapters/cucumberExpression.ts` | Converts Cucumber Expressions (`{int}`, `(s)`, `word/word`) to `RegExp` |
+| `src/adapterRegistry.ts` | Maps file extension (last extension of `stepsGlob`'s final segment, `{js,ts}` braces expanded) → `LanguageAdapter`; returns `undefined` for undetectable/ambiguous globs (surfaced in `showStepResolution`) |
+| `src/adapters/stepMatch.ts` | Shared adapter helpers: `defaultStepMatches` (3-stage matcher), `unescapeStringLiteral`, `defaultReverseRegex` |
+| `src/adapters/cucumberExpression.ts` | Converts Cucumber Expressions (`{int}`, `{}`, `(s)`, `word/word`) to `RegExp` |
 | `src/adapters/goAdapter.ts` | Parses `ctx.Step(` / `s.Step(` patterns |
 | `src/adapters/javaAdapter.ts` | Parses `@Given/@When/@Then` (Java + Kotlin — identical syntax) |
 | `src/adapters/pythonAdapter.ts` | Parses `@given/@when/@then` (behave) |
@@ -109,6 +110,11 @@ type StepDefinition = {
 interface LanguageAdapter {
   parseStepDefinitions(content: string): StepDefinition[];
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean;
+  // Regex for reverse navigation, or undefined when normalized equality suffices.
+  // Go returns the pattern as-is (godog patterns are always regexes); all others
+  // use defaultReverseRegex (cucumber expressions + anchored regexes only —
+  // literals return undefined to avoid substring false positives).
+  reverseRegexForPattern(pattern: string): string | undefined;
 }
 
 // bddParser.ts — legacy Go path only
@@ -125,20 +131,26 @@ type BddStepBlock = {
 
 ### `matchesStep` logic (all adapters)
 
-Every adapter's `matchesStep` applies the same three-stage priority:
+All adapters except Go delegate to `defaultStepMatches` in `src/adapters/stepMatch.ts` (three-stage priority):
 1. **Normalized text equality** — `normalizeStepText(pattern) === normalizedStep`
 2. **Cucumber Expression** — `isCucumberExpression(pattern)` → `cucumberExpressionToRegex(pattern).test(rawStep)`
-3. **Regex or literal**:
-   - Go adapter: `regexMatchesRawStep(pattern, rawStep)` (patterns always regex)
-   - All others: if pattern starts with `^` or ends with `$` → use as regex; otherwise escape and anchor as literal string
+3. **Regex or literal** — if pattern starts with `^` or ends with `$` → use as regex; otherwise escape and anchor as literal string
+
+The Go adapter keeps its own stage 3: `regexMatchesRawStep(pattern, rawStep)` (godog patterns are always regexes).
+
+**Unescaping happens at parse time, not match time.** Each parser passes captured
+string-literal content through `unescapeStringLiteral` (so source `\\d` becomes `\d`,
+`\"` becomes `"`), except raw forms: Go backtick strings and JS/Ruby `/regex/` literals
+are kept byte-for-byte, and C# verbatim `@"..."` strings only unescape `""` → `"`.
 
 ### Adding a new language
 
-1. Create `src/adapters/<lang>Adapter.ts` implementing `LanguageAdapter`
-2. Create `src/adapters/__tests__/<lang>Adapter.test.ts` with Vitest tests
+1. Create `src/adapters/<lang>Adapter.ts` implementing `LanguageAdapter` (reuse `defaultStepMatches` / `defaultReverseRegex` / `unescapeStringLiteral` from `stepMatch.ts`)
+2. Create `src/adapters/__tests__/<lang>Adapter.test.ts` with Vitest tests (include source-level escape cases)
 3. Add the extension mapping in `src/adapterRegistry.ts` (`EXT_MAP`)
-4. Add `onLanguage:<lang>` to `activationEvents` in `package.json`
-5. Add `{ language: "<lang>", scheme: "file" }` and `vscode-remote` variant to `adapterStepFileSelector` in `src/extension.ts`
+4. Add `{ language: "<lang>", scheme: "file" }` and `vscode-remote` variant to `adapterStepFileSelector` in `src/extension.ts`
+
+(No `activationEvents` change needed — activation is driven by `.feature` files, not step-file languages.)
 
 ### Dev mode
 
