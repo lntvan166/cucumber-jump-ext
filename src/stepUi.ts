@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { getResolutionChainForFeature } from "./config";
 import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { getStepTextAtLineNumber, isFeatureUri } from "./featureParser";
 import { explainFeatureStepResolution, resolveFromFeature, resolveImplementationOnly } from "./resolver";
@@ -116,6 +117,8 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
         const text = document.getText();
         const lenses: vscode.CodeLens[] = [];
         const lineCount = document.lineCount;
+        // The Registry lens only makes sense for legacy Go packs with a bddFile step registry
+        const hasRegistryPack = getResolutionChainForFeature(document.uri).some((e) => Boolean(e.pack.bddFile));
 
         for (let i = 0; i < lineCount; i++) {
           if (token.isCancellationRequested) {
@@ -137,13 +140,15 @@ export function registerStepUi(context: vscode.ExtensionContext): void {
             }),
           );
 
-          lenses.push(
-            new vscode.CodeLens(range, {
-              title: "$(symbol-interface) Registry",
-              command: "cucumberJump._codeLensStepNavigate",
-              arguments: [uriStr, i, "registry"],
-            }),
-          );
+          if (hasRegistryPack) {
+            lenses.push(
+              new vscode.CodeLens(range, {
+                title: "$(symbol-interface) Registry",
+                command: "cucumberJump._codeLensStepNavigate",
+                arguments: [uriStr, i, "registry"],
+              }),
+            );
+          }
         }
 
         return lenses;

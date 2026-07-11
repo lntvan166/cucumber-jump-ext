@@ -65,7 +65,7 @@ function refreshDevModeStatusBar(): void {
   md.appendMarkdown("**Cucumber Jump · Dev mode**\n\n");
   md.appendMarkdown(`**Active feature:** \`${rel}\`\n\n`);
   md.appendMarkdown("The paired `.feature` tab gets a **file decoration** (colored marker next to the title).\n\n");
-  md.appendMarkdown("Layout: **Go left** · **Feature right**\n\n");
+  md.appendMarkdown("Layout: **code left** · **feature right**\n\n");
   md.appendMarkdown("Click for actions.");
   devModeStatusItem.tooltip = md;
   devModeStatusItem.show();
@@ -179,15 +179,15 @@ async function applyDevModeLayout(
   });
 }
 
-async function openDevModeFromGoEditorWithFeature(
+async function openDevModeFromCodeEditorWithFeature(
   featureLocation: vscode.Location,
-  goEditor: vscode.TextEditor,
+  codeEditor: vscode.TextEditor,
 ): Promise<void> {
-  await applyDevModeLayout(featureLocation.uri, featureLocation.range, goEditor.document.uri, goEditor.selection);
+  await applyDevModeLayout(featureLocation.uri, featureLocation.range, codeEditor.document.uri, codeEditor.selection);
   startSession(featureLocation.uri, {
     codeViewColumn: CODE_COLUMN,
     featureViewColumn: FEATURE_COLUMN,
-    lastCodeUri: goEditor.document.uri,
+    lastCodeUri: codeEditor.document.uri,
   });
 }
 
@@ -422,7 +422,7 @@ export async function openDevMode(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
 
   if (!editor) {
-    await vscode.window.showInformationMessage("Cucumber Jump: open a .feature or Go step file first.");
+    await vscode.window.showInformationMessage("Cucumber Jump: open a .feature file or a step file first.");
     return;
   }
 
@@ -449,18 +449,22 @@ export async function openDevMode(): Promise<void> {
         }
       }
 
-      if (!primary) {
+      if (!primary && chain[0].pack.bddFile) {
         try {
           const bddUri = bddUriForEntry(chain[0], doc.uri);
           await vscode.workspace.fs.stat(bddUri);
           const start = new vscode.Position(0, 0);
           primary = new vscode.Location(bddUri, new vscode.Range(start, start));
         } catch {
-          await vscode.window.showInformationMessage(
-            "Cucumber Jump: could not open a step file for this feature; check cucumberJump.projects / libraries.",
-          );
-          return;
+          // fall through to the message below
         }
+      }
+
+      if (!primary) {
+        await vscode.window.showInformationMessage(
+          "Cucumber Jump: could not open a step file for this feature; check cucumberJump.projects / libraries.",
+        );
+        return;
       }
 
       await applyDevModeLayout(doc.uri, editor.selection, primary.uri, primary.range);
@@ -472,26 +476,26 @@ export async function openDevMode(): Promise<void> {
       return;
     }
 
-    if (doc.languageId !== "go") {
+    if (doc.languageId !== "go" && !findPackForStepsFile(doc.uri)) {
       await vscode.window.showInformationMessage(
-        "Cucumber Jump: Dev mode starts from a .feature file or a Go bdd/steps file.",
+        "Cucumber Jump: Dev mode starts from a .feature file or a configured step file.",
       );
       return;
     }
 
     const hasBddPack = Boolean(findPackForBddFile(doc.uri));
-    let goDevLocs: vscode.Location[] | undefined;
+    let codeDevLocs: vscode.Location[] | undefined;
 
     if (hasBddPack) {
-      goDevLocs = await resolveFromBdd(doc, editor.selection.active, cts.token);
+      codeDevLocs = await resolveFromBdd(doc, editor.selection.active, cts.token);
     }
 
     if (!hasBddPack && findPackForStepsFile(doc.uri)) {
-      goDevLocs = await resolveFeatureUsagesFromStepsAtPosition(doc, editor.selection.active, cts.token);
+      codeDevLocs = await resolveFeatureUsagesFromStepsAtPosition(doc, editor.selection.active, cts.token);
     }
 
-    if (goDevLocs && goDevLocs.length > 0) {
-      await openDevModeFromGoEditorWithFeature(goDevLocs[0], editor);
+    if (codeDevLocs && codeDevLocs.length > 0) {
+      await openDevModeFromCodeEditorWithFeature(codeDevLocs[0], editor);
       return;
     }
 
@@ -518,7 +522,7 @@ async function runDevModeStatusBarAction(): Promise<void> {
       action: "feature",
     },
     {
-      label: "$(code) Focus Go / step file (left)",
+      label: "$(code) Focus step file (left)",
       description: vscode.workspace.asRelativePath(session.lastCodeUri),
       action: "code",
     },

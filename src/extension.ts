@@ -170,7 +170,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const locations = await resolveFromFeature(editor.document, editor.selection.active, cts.token);
         if (!locations || locations.length === 0) {
-          await vscode.window.showInformationMessage("Cucumber Jump: no step definition found for this line.");
+          await showNoTargetMessage("Cucumber Jump: no step definition found for this line.");
           return;
         }
 
@@ -189,6 +189,8 @@ export function activate(context: vscode.ExtensionContext): void {
         const loc = await resolveRegistryOnly(editor.document, editor.selection.active, cts.token);
         if (loc) {
           await showTextDocumentRevealAtTop(loc.uri, { selection: loc.range });
+        } else {
+          await showNoTargetMessage("Cucumber Jump: no step registry entry found for this line.");
         }
       } finally {
         cts.dispose();
@@ -200,6 +202,8 @@ export function activate(context: vscode.ExtensionContext): void {
         const loc = await resolveImplementationOnly(editor.document, editor.selection.active, cts.token);
         if (loc) {
           await showTextDocumentRevealAtTop(loc.uri, { selection: loc.range });
+        } else {
+          await showNoTargetMessage("Cucumber Jump: no implementation found for this line.");
         }
       } finally {
         cts.dispose();
@@ -236,4 +240,11 @@ export function deactivate(): void {
 
 function isFeatureDocument(document: vscode.TextDocument): boolean {
   return isFeatureUri(document.uri);
+}
+
+async function showNoTargetMessage(message: string): Promise<void> {
+  const action = await vscode.window.showInformationMessage(message, "Show step resolution");
+  if (action === "Show step resolution") {
+    await vscode.commands.executeCommand("cucumberJump.showStepResolution");
+  }
 }
