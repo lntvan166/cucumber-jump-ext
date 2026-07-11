@@ -19,6 +19,9 @@ const EXT_MAP: Record<string, LanguageAdapter> = {
   dart: dartAdapter,
 };
 
+/** Every file extension a language adapter exists for (used by the workspace scanner). */
+export const KNOWN_STEP_EXTENSIONS: string[] = Object.keys(EXT_MAP);
+
 /**
  * Extracts candidate file extensions from a stepsGlob: the text after the LAST
  * dot of the last path segment, with `{a,b}` brace groups expanded.
