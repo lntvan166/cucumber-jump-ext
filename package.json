@@ -215,7 +215,37 @@
           "icon": "$(close)"
         }
       ]
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "cucumberJump.gettingStarted",
+        "title": "Get started with Cucumber Jump",
+        "description": "Jump between Gherkin steps and step definitions in three steps.",
+        "steps": [
+          {
+            "id": "setup",
+            "title": "Set up navigation",
+            "description": "Scan the workspace and detect your feature/step-definition projects — or let zero-setup inference do it automatically the first time you open a .feature file.\n[Create configuration](command:cucumberJump.createConfiguration)",
+            "media": { "markdown": "media/walkthrough/setup.md" },
+            "completionEvents": ["onCommand:cucumberJump.createConfiguration"]
+          },
+          {
+            "id": "jump",
+            "title": "Try a jump",
+            "description": "Open a .feature file, put the cursor on a Given/When/Then line, and press F12.",
+            "media": { "markdown": "media/walkthrough/jump.md" },
+            "completionEvents": ["onCommand:cucumberJump.goToPrimaryStepTarget"]
+          },
+          {
+            "id": "extras",
+            "title": "Optional extras",
+            "description": "Dev mode pairs code and feature side by side; CodeLens and the status-bar hint show resolution inline.\n[Open settings](command:workbench.action.openSettings?%22cucumberJump%22)",
+            "media": { "markdown": "media/walkthrough/extras.md" },
+            "completionEvents": ["onSettingChanged:cucumberJump.codeLensEnabled", "onCommand:cucumberJump.toggleDevMode"]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",
