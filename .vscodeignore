@@ -12,3 +12,5 @@ assets/demo*.gif
 .qodo/**
 *.vsix
 manual-test-seed.py
+.github/**
+.superpowers/**
