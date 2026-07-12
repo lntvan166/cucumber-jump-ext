@@ -36,6 +36,50 @@ export function parseStepLine(line: string): string | undefined {
   return kw[2].trim();
 }
 
+export type StepKeyword = 'Given' | 'When' | 'Then';
+
+/**
+ * Returns the effective Given/When/Then keyword for a step line plus its body.
+ * `And`/`But` inherit the nearest governing Given/When/Then above them; a leading
+ * And/But with nothing above defaults to `Given`. Returns undefined for
+ * non-step lines (comments, blank, feature/scenario headers).
+ */
+export function getStepKeywordAtLine(
+  documentText: string,
+  zeroBasedLine: number,
+): { keyword: StepKeyword; body: string } | undefined {
+  const lines = documentText.split(/\r?\n/);
+  if (zeroBasedLine < 0 || zeroBasedLine >= lines.length) {
+    return undefined;
+  }
+
+  const here = lines[zeroBasedLine].trim().match(stepKeywordRegex);
+  if (!here) {
+    return undefined;
+  }
+
+  const rawKeyword = here[1];
+  const body = here[2].trim();
+
+  if (rawKeyword === 'Given' || rawKeyword === 'When' || rawKeyword === 'Then') {
+    return { keyword: rawKeyword, body };
+  }
+
+  // And / But: scan upward for the governing keyword.
+  for (let i = zeroBasedLine - 1; i >= 0; i--) {
+    const m = lines[i].trim().match(stepKeywordRegex);
+    if (!m) {
+      continue;
+    }
+    const kw = m[1];
+    if (kw === 'Given' || kw === 'When' || kw === 'Then') {
+      return { keyword: kw, body };
+    }
+  }
+
+  return { keyword: 'Given', body };
+}
+
 export function getStepTextAtLineNumber(documentText: string, zeroBasedLine: number): string | undefined {
   const lines = documentText.split(/\r?\n/);
   if (zeroBasedLine < 0 || zeroBasedLine >= lines.length) {
