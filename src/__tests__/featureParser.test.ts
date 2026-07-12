@@ -36,4 +36,14 @@ describe('getStepKeywordAtLine', () => {
     expect(getStepKeywordAtLine(doc, 0)).toBeUndefined();
     expect(getStepKeywordAtLine(doc, 7)).toBeUndefined();
   });
+
+  it('does not let a leading And/But borrow a keyword from a previous scenario', () => {
+    const twoScenarios = [
+      'Scenario: A',
+      '  When action A',
+      'Scenario: B',
+      '  And follow-up B',
+    ].join('\n');
+    expect(getStepKeywordAtLine(twoScenarios, 3)).toEqual({ keyword: 'Given', body: 'follow-up B' });
+  });
 });

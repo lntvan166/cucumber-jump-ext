@@ -1,4 +1,5 @@
 const stepKeywordRegex = /^\s*(Given|When|Then|And|But)\s+(.+)\s*$/;
+const blockHeaderRegex = /^(Feature|Rule|Background|Scenario Outline|Scenario|Example|Examples)\b.*:/;
 
 /** True if `fsPath` is a `.feature` file (case-insensitive extension). */
 export function isFeatureFilePath(fsPath: string): boolean {
@@ -65,9 +66,13 @@ export function getStepKeywordAtLine(
     return { keyword: rawKeyword, body };
   }
 
-  // And / But: scan upward for the governing keyword.
+  // And / But: scan upward for the governing keyword, stopping at scenario boundaries.
   for (let i = zeroBasedLine - 1; i >= 0; i--) {
-    const m = lines[i].trim().match(stepKeywordRegex);
+    const trimmedLine = lines[i].trim();
+    if (blockHeaderRegex.test(trimmedLine)) {
+      break;
+    }
+    const m = trimmedLine.match(stepKeywordRegex);
     if (!m) {
       continue;
     }
