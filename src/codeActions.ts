@@ -15,10 +15,15 @@ const DIAGNOSTIC_CODE = "missing-step";
 
 const FEATURE_SELECTOR: vscode.DocumentSelector = [
   { scheme: "file", pattern: "**/*.feature" },
+  { scheme: "file", pattern: "**/*.FEATURE" },
   { scheme: "vscode-remote", pattern: "**/*.feature" },
+  { scheme: "vscode-remote", pattern: "**/*.FEATURE" },
   { scheme: "file", language: "gherkin" },
   { scheme: "file", language: "cucumber" },
   { scheme: "file", language: "feature" },
+  { scheme: "vscode-remote", language: "gherkin" },
+  { scheme: "vscode-remote", language: "cucumber" },
+  { scheme: "vscode-remote", language: "feature" },
 ];
 
 /** Comment prefix for the "move into your class" marker (only class-based langs use it). */
@@ -90,8 +95,12 @@ function firstStubCapableEntry(
 
 function bodyLineOffset(stub: string): number {
   const lines = stub.split("\n");
-  const idx = lines.findIndex((l) => /pending|NotImplemented|Unimplemented|ErrPending/i.test(l));
-  return idx === -1 ? 0 : idx;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/pending|NotImplemented|Unimplemented|ErrPending/i.test(lines[i])) {
+      return i;
+    }
+  }
+  return 0;
 }
 
 async function createStepDefinition(uriArg?: unknown, lineArg?: unknown): Promise<void> {
@@ -156,12 +165,10 @@ async function createStepDefinition(uriArg?: unknown, lineArg?: unknown): Promis
     return;
   }
 
-  const ext = picked.file
-    ? (picked.file.fsPath.split(".").pop() ?? "").toLowerCase()
-    : (extensionsForGlob(concrete)[0] ?? "");
-  const stub = chosen.adapter.stubTemplate!.render({ keyword: kw.keyword, stepBody: kw.body, ext });
-
   if (picked.file) {
+    const ext = (picked.file.fsPath.split(".").pop() ?? "").toLowerCase();
+    const stub = chosen.adapter.stubTemplate!.render({ keyword: kw.keyword, stepBody: kw.body, ext });
+
     const doc = await vscode.workspace.openTextDocument(picked.file);
     const lastLine = doc.lineCount - 1;
     const endPos = new vscode.Position(lastLine, doc.lineAt(lastLine).text.length);
@@ -178,7 +185,8 @@ async function createStepDefinition(uriArg?: unknown, lineArg?: unknown): Promis
     return;
   }
 
-  const proposed = proposeNewFilePath(chosen.entry.folder, concrete, files, document.uri, ext);
+  const provisionalExt = extensionsForGlob(concrete)[0] ?? "";
+  const proposed = proposeNewFilePath(chosen.entry.folder, concrete, files, document.uri, provisionalExt);
   const input = await vscode.window.showInputBox({
     title: "Cucumber Jump: new step file",
     prompt: "Path relative to the workspace folder",
@@ -188,6 +196,8 @@ async function createStepDefinition(uriArg?: unknown, lineArg?: unknown): Promis
     return;
   }
   const target = vscode.Uri.joinPath(chosen.entry.folder.uri, input);
+  const ext = (input.split(".").pop() ?? "").toLowerCase();
+  const stub = chosen.adapter.stubTemplate!.render({ keyword: kw.keyword, stepBody: kw.body, ext });
   const content = newFileContent(ext, stub);
   const edit = new vscode.WorkspaceEdit();
   edit.createFile(target, { ignoreIfExists: true, contents: Buffer.from(content, "utf8") });
