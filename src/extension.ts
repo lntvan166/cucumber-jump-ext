@@ -8,6 +8,7 @@ import { showTextDocumentRevealAtTop } from "./editorNavigate";
 import { registerDevMode } from "./devMode";
 import { isFeatureUri } from "./featureParser";
 import { registerOnboarding } from "./onboarding";
+import { registerDiagnostics } from "./diagnostics";
 import { resolveFromBdd, resolveFromFeature, resolveImplementationOnly, resolveRegistryOnly, resolveFeatureUsagesFromStepsAtPosition } from "./resolver";
 import { registerStepUi } from "./stepUi";
 
@@ -63,6 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerStepUi(context);
   registerDevMode(context);
   registerOnboarding(context);
+  registerDiagnostics(context);
   scheduleConflictingExtensionHint(context);
   const definitionProvider: vscode.DefinitionProvider = {
     provideDefinition: async (document, position, token) => {
