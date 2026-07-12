@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern } from '../stepStubber';
 
 const STRING_STEP_REGEX = /^\s*(Given|When|Then|And|But)\s*\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")\s*\)/;
 const REGEX_STEP_REGEX = /^\s*(Given|When|Then|And|But)\s*\(\s*\/([^/]+)\//;
@@ -65,4 +66,14 @@ export const rubyAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: false,
+    render({ keyword, stepBody }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const pattern = cucumber.replace(/'/g, "\\'");
+      const args = paramTypes.map((_, i) => `arg${i + 1}`);
+      const block = args.length ? ` |${args.join(', ')}|` : '';
+      return [`${keyword}('${pattern}') do${block}`, '  pending', 'end'].join('\n');
+    },
+  },
 };

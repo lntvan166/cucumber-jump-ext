@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern, type StubParamType } from '../stepStubber';
 
 const STRING_STEP_REGEX = /^\s*(Given|When|Then|And|But)\s*\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`)/;
 const REGEX_STEP_REGEX = /^\s*(Given|When|Then|And|But)\s*\(\s*\/([^/]+)\//;
@@ -74,4 +75,19 @@ export const jsAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: false,
+    render({ keyword, stepBody, ext }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const pattern = cucumber.replace(/'/g, "\\'");
+      const isTs = ext === 'ts' || ext === 'tsx';
+      const tsType = (t: StubParamType) => (t === 'string' ? 'string' : 'number');
+      const args = paramTypes.map((t, i) => (isTs ? `arg${i + 1}: ${tsType(t)}` : `arg${i + 1}`)).join(', ');
+      return [
+        `${keyword}('${pattern}', function (${args}) {`,
+        "  return 'pending';",
+        '});',
+      ].join('\n');
+    },
+  },
 };

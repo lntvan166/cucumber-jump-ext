@@ -67,3 +67,17 @@ describe('rubyAdapter escaped quotes', () => {
     expect(rubyAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
   });
 });
+
+describe('rubyAdapter.stubTemplate', () => {
+  const t = rubyAdapter.stubTemplate!;
+  it('renders a block with args', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin"', ext: 'rb' })).toBe(
+      ["When('the user enters {string}') do |arg1|", '  pending', 'end'].join('\n'),
+    );
+  });
+  it('renders a block without args', () => {
+    expect(t.render({ keyword: 'Given', stepBody: 'the user is logged in', ext: 'rb' })).toBe(
+      ["Given('the user is logged in') do", '  pending', 'end'].join('\n'),
+    );
+  });
+});

@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern, deriveIdentifierWords, toLowerCamel, type StubParamType } from '../stepStubber';
 
 const STEP_REGEX = /^\s*(given\d*|when\d*|then\d*|and\d*|but\d*)\s*(?:<[^>]*>)?\s*\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/i;
 
@@ -44,4 +45,27 @@ export const dartAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: false,
+    render({ keyword, stepBody }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const name = toLowerCamel(deriveIdentifierWords(stepBody));
+      const pattern = cucumber.replace(/'/g, "\\'");
+      const n = paramTypes.length;
+      const suffix = n > 0 ? String(n) : '';
+      const dartType = (t: StubParamType) => (t === 'string' ? 'String' : t === 'int' ? 'int' : 'double');
+      const generics = [...paramTypes.map(dartType), 'World'].join(', ');
+      const cbArgs = [...paramTypes.map((_, i) => `arg${i + 1}`), 'context'].join(', ');
+      return [
+        `StepDefinitionGeneric ${name}() {`,
+        `  return ${keyword.toLowerCase()}${suffix}<${generics}>(`,
+        `    '${pattern}',`,
+        `    (${cbArgs}) async {`,
+        '      throw UnimplementedError();',
+        '    },',
+        '  );',
+        '}',
+      ].join('\n');
+    },
+  },
 };

@@ -102,3 +102,19 @@ describe('csharpAdapter.matchesStep', () => {
     expect(csharpAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('csharpAdapter.stubTemplate', () => {
+  const t = csharpAdapter.stubTemplate!;
+  it('is class-based and renders a PascalCase method', () => {
+    expect(t.isClassBased).toBe(true);
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'cs' })).toBe(
+      [
+        '[When("the user enters {string} and {int} codes")]',
+        'public void TheUserEntersAndCodes(string arg1, int arg2)',
+        '{',
+        '    throw new NotImplementedException();',
+        '}',
+      ].join('\n'),
+    );
+  });
+});

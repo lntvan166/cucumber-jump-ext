@@ -100,3 +100,18 @@ describe('goAdapter reverse regex', () => {
     expect(goAdapter.reverseRegexForPattern('I have (\\d+) cukes')).toBe('I have (\\d+) cukes');
   });
 });
+
+describe('goAdapter.stubTemplate', () => {
+  const t = goAdapter.stubTemplate!;
+  it('renders a godog handler with a regex registration hint', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'go' })).toBe(
+      [
+        '// TODO(Cucumber Jump): register this step, e.g.',
+        '//   ctx.Step(`^the user enters "([^"]*)" and (\\d+) codes$`, theUserEntersAndCodes)',
+        'func theUserEntersAndCodes(arg1 string, arg2 int) error {',
+        '    return godog.ErrPending',
+        '}',
+      ].join('\n'),
+    );
+  });
+});

@@ -91,3 +91,25 @@ describe('jsAdapter reverse regex', () => {
     expect(jsAdapter.reverseRegexForPattern('the user logs in')).toBeUndefined();
   });
 });
+
+describe('jsAdapter.stubTemplate', () => {
+  const t = jsAdapter.stubTemplate!;
+  it('renders untyped params for .js', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'js' })).toBe(
+      [
+        "When('the user enters {string} and {int} codes', function (arg1, arg2) {",
+        "  return 'pending';",
+        '});',
+      ].join('\n'),
+    );
+  });
+  it('renders typed params for .ts', () => {
+    expect(t.render({ keyword: 'Then', stepBody: 'the total is 5', ext: 'ts' })).toBe(
+      [
+        "Then('the total is {int}', function (arg1: number) {",
+        "  return 'pending';",
+        '});',
+      ].join('\n'),
+    );
+  });
+});
