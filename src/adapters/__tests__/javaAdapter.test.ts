@@ -102,3 +102,30 @@ describe('javaAdapter.matchesStep', () => {
     expect(javaAdapter.matchesStep(def, 'the user logs in to admin', 'the user logs in to admin')).toBe(false);
   });
 });
+
+describe('javaAdapter.stubTemplate', () => {
+  const t = javaAdapter.stubTemplate!;
+  it('is class-based', () => {
+    expect(t.isClassBased).toBe(true);
+  });
+  it('renders a Java method with typed params', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'java' })).toBe(
+      [
+        '@When("the user enters {string} and {int} codes")',
+        'public void the_user_enters_and_codes(String arg1, int arg2) {',
+        '    throw new io.cucumber.java.PendingException();',
+        '}',
+      ].join('\n'),
+    );
+  });
+  it('renders Kotlin syntax for .kt targets', () => {
+    expect(t.render({ keyword: 'Then', stepBody: 'the total is 5', ext: 'kt' })).toBe(
+      [
+        '@Then("the total is {int}")',
+        'fun the_total_is(arg1: Int) {',
+        '    throw io.cucumber.java.PendingException()',
+        '}',
+      ].join('\n'),
+    );
+  });
+});

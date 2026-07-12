@@ -4,6 +4,15 @@ All notable changes to **Cucumber Jump** are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0] - 2026-07-12
+
+### Added
+
+- **Missing-step diagnostics** — opt-in `cucumberJump.diagnosticsEnabled` warns (yellow squiggle) on `.feature` steps with no matching step definition. Only fires when a project/library matches the feature and ≥1 step file is found, so unconfigured or mis-globbed features are never flagged. Works for all nine languages and the legacy Go `bddFile` path.
+- **"Create step definition" quick-fix** — a lightbulb on a squiggled step (also `Cucumber Jump: Create step definition` in the palette) generates a correctly-formatted stub in the target language, inferring `{string}`/`{int}`/`{float}` parameters (anchored regex for Go). Choose an existing step file or create a new one; class-based languages get a placement marker when appending and a wrapped class when creating a new file.
+
+[2.2.0]: https://github.com/lntvan166/cucumber-jump-ext/compare/v2.1.0...v2.2.0
+
 ## [2.1.0] - 2026-07-12
 
 ### Added

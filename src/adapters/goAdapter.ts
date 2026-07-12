@@ -3,6 +3,7 @@ import { normalizeStepText } from '../featureParser';
 import { isCucumberExpression, cucumberExpressionToRegex } from './cucumberExpression';
 import { unescapeStringLiteral } from './stepMatch';
 import { regexMatchesRawStep } from '../bddParser';
+import { inferPattern, deriveIdentifierWords, toLowerCamel, type StubParamType } from '../stepStubber';
 
 const STEP_REGEX = /\.Step\s*\(\s*(?:`([^`]*)`|"((?:[^"\\]|\\.)*)")\s*,\s*([a-zA-Z_][a-zA-Z0-9_]*|func\b)/;
 
@@ -77,4 +78,20 @@ export const goAdapter: LanguageAdapter = {
   },
   // godog patterns are always regexes, anchored or not
   reverseRegexForPattern: (pattern: string) => pattern,
+  stubTemplate: {
+    isClassBased: false,
+    render({ stepBody }) {
+      const { goRegex, paramTypes } = inferPattern(stepBody);
+      const name = toLowerCamel(deriveIdentifierWords(stepBody));
+      const goType = (t: StubParamType) => (t === 'string' ? 'string' : t === 'int' ? 'int' : 'float64');
+      const params = paramTypes.map((t, i) => `arg${i + 1} ${goType(t)}`).join(', ');
+      return [
+        '// TODO(Cucumber Jump): register this step, e.g.',
+        '//   ctx.Step(`' + goRegex + '`, ' + name + ')',
+        `func ${name}(${params}) error {`,
+        '    return godog.ErrPending',
+        '}',
+      ].join('\n');
+    },
+  },
 };

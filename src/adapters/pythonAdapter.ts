@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern, deriveIdentifierWords, toSnake } from '../stepStubber';
 
 const DECORATOR_REGEX = /^\s*@(given|when|then|step)\s*\(\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")\s*\)/i;
 const DEF_REGEX = /^\s*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
@@ -56,4 +57,18 @@ export const pythonAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: false,
+    render({ keyword, stepBody }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const name = toSnake(deriveIdentifierWords(stepBody));
+      const pattern = cucumber.replace(/'/g, "\\'");
+      const params = ['context', ...paramTypes.map((_, i) => `arg${i + 1}`)].join(', ');
+      return [
+        `@${keyword.toLowerCase()}('${pattern}')`,
+        `def ${name}(${params}):`,
+        '    raise NotImplementedError',
+      ].join('\n');
+    },
+  },
 };

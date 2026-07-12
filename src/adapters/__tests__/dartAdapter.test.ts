@@ -73,3 +73,26 @@ describe('dartAdapter escaped quotes', () => {
     expect(dartAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
   });
 });
+
+describe('dartAdapter.stubTemplate', () => {
+  const t = dartAdapter.stubTemplate!;
+  it('renders a flutter_gherkin step with arity suffix', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'dart' })).toBe(
+      [
+        'StepDefinitionGeneric theUserEntersAndCodes() {',
+        "  return when2<String, int, World>(",
+        "    'the user enters {string} and {int} codes',",
+        '    (arg1, arg2, context) async {',
+        '      throw UnimplementedError();',
+        '    },',
+        '  );',
+        '}',
+      ].join('\n'),
+    );
+  });
+  it('uses no numeric suffix for zero-parameter steps', () => {
+    const out = t.render({ keyword: 'Given', stepBody: 'the user is logged in', ext: 'dart' });
+    expect(out).toContain('return given<World>(');
+    expect(out).toContain('(context) async {');
+  });
+});

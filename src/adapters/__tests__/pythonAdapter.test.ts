@@ -85,3 +85,28 @@ describe('pythonAdapter escaped quotes', () => {
     expect(pythonAdapter.matchesStep(defs[0], "I can't stop", "i can't stop")).toBe(true);
   });
 });
+
+describe('pythonAdapter.stubTemplate', () => {
+  const t = pythonAdapter.stubTemplate!;
+  it('is not class-based', () => {
+    expect(t.isClassBased).toBe(false);
+  });
+  it('renders a behave-style decorator stub with typed placeholders', () => {
+    expect(t.render({ keyword: 'When', stepBody: 'the user enters "admin" and 3 codes', ext: 'py' })).toBe(
+      [
+        "@when('the user enters {string} and {int} codes')",
+        'def the_user_enters_and_codes(context, arg1, arg2):',
+        '    raise NotImplementedError',
+      ].join('\n'),
+    );
+  });
+  it('renders a no-parameter stub', () => {
+    expect(t.render({ keyword: 'Given', stepBody: 'the user is logged in', ext: 'py' })).toBe(
+      [
+        "@given('the user is logged in')",
+        'def the_user_is_logged_in(context):',
+        '    raise NotImplementedError',
+      ].join('\n'),
+    );
+  });
+});

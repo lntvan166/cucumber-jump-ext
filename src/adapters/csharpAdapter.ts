@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern, deriveIdentifierWords, toUpperCamel, type StubParamType } from '../stepStubber';
 
 // Group 2: verbatim prefix (@" / $@" / @$"), group 3: verbatim content ("" = escaped quote)
 // Group 4: regular string content (backslash escapes)
@@ -58,4 +59,21 @@ export const csharpAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: true,
+    render({ keyword, stepBody }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const name = toUpperCamel(deriveIdentifierWords(stepBody));
+      const pattern = cucumber.replace(/"/g, '\\"');
+      const csType = (t: StubParamType) => (t === 'string' ? 'string' : t === 'int' ? 'int' : 'double');
+      const params = paramTypes.map((t, i) => `${csType(t)} arg${i + 1}`).join(', ');
+      return [
+        `[${keyword}("${pattern}")]`,
+        `public void ${name}(${params})`,
+        '{',
+        '    throw new NotImplementedException();',
+        '}',
+      ].join('\n');
+    },
+  },
 };

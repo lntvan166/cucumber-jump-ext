@@ -12,7 +12,7 @@ import {
 import { bddUriForEntry, bddUriForStepsEntry } from "./goImplFinder";
 import { getBddBlocks } from "./documentCache";
 import { findFeatureUsages } from "./featureFinder";
-import { getStepTextAtLineNumber, normalizeStepText } from "./featureParser";
+import { getStepTextAtLineNumber, normalizeStepText, parseStepLine } from "./featureParser";
 import { findImplementationLocation } from "./goImplFinder";
 import { isSameLocalFile } from "./sameFileUri";
 import { extensionsForGlob, getAdapterForGlob, getAdapterForUri } from "./adapterRegistry";
@@ -490,4 +490,97 @@ export async function resolveImplementationOnly(
   }
 
   return undefined;
+}
+
+export type FeatureDiagnosticsVerdict =
+  | { eligible: false }
+  | { eligible: true; unmatchedLines: number[] };
+
+/**
+ * One scan over a feature file: builds a matcher per resolution-chain entry (adapter
+ * path collects StepDefinitions across all step files; legacy path reads BddStepBlocks),
+ * then reports every step line matched by no entry. Returns { eligible: false } when
+ * the config is not usable enough for "missing" to be meaningful (no chain, or no entry
+ * yields a match source), so unconfigured/misconfigured features are never flagged.
+ */
+export async function findUnmatchedSteps(
+  document: vscode.TextDocument,
+  token: vscode.CancellationToken,
+): Promise<FeatureDiagnosticsVerdict> {
+  await ensureInferenceForUri(document.uri);
+  const chain = getResolutionChainForFeature(document.uri);
+  if (chain.length === 0) {
+    return { eligible: false };
+  }
+
+  const matchers: Array<(raw: string, norm: string) => boolean> = [];
+
+  for (const entry of chain) {
+    if (token.isCancellationRequested) {
+      return { eligible: false };
+    }
+
+    if (entry.pack.bddFile) {
+      const bddUri = bddUriForEntry(entry, document.uri);
+      try {
+        const blocks = await getBddBlocks(bddUri);
+        matchers.push((raw, norm) => blocks.some((b) => blockMatchesStep(b, raw, norm)));
+      } catch {
+        // unreadable registry — not a match source
+      }
+      continue;
+    }
+
+    const adapter = getAdapterForGlob(entry.pack.stepsGlob);
+    if (!adapter) {
+      continue;
+    }
+    const featureRel = workspaceRelativePath(entry.folder, document.uri);
+    const stepsGlobConcrete = entry.pack.inferred
+      ? entry.pack.stepsGlob
+      : concretePathFromFeatureAndGlobPattern(featureRel, entry.pack.stepsGlob);
+    const pattern = new vscode.RelativePattern(entry.folder, stepsGlobConcrete);
+    const files = await vscode.workspace.findFiles(pattern, "**/node_modules/**", 5000, token);
+    if (files.length === 0) {
+      continue;
+    }
+    const defs: StepDefinition[] = [];
+    for (const file of files) {
+      if (token.isCancellationRequested) {
+        return { eligible: false };
+      }
+      try {
+        defs.push(...(await getStepDefinitions(file, adapter)));
+      } catch {
+        // unparseable file — skip
+      }
+    }
+    matchers.push((raw, norm) => defs.some((d) => adapter.matchesStep(d, raw, norm)));
+  }
+
+  if (matchers.length === 0) {
+    return { eligible: false };
+  }
+
+  const unmatchedLines: number[] = [];
+  const lines = document.getText().split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const stepText = parseStepLine(lines[i]);
+    if (!stepText) {
+      continue;
+    }
+    // Scenario Outline template steps carry `<placeholder>` tokens (e.g. "I have
+    // <count> cucumbers") that are substituted from the Examples table at run time,
+    // so they never literally match a concrete step pattern/definition. Skip them
+    // rather than flag them as missing.
+    if (/<[^>]+>/.test(stepText)) {
+      continue;
+    }
+    const norm = normalizeStepText(stepText);
+    if (!matchers.some((m) => m(stepText, norm))) {
+      unmatchedLines.push(i);
+    }
+  }
+
+  return { eligible: true, unmatchedLines };
 }
