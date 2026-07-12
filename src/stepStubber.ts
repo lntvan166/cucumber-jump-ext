@@ -7,7 +7,8 @@ export interface InferredPattern {
 }
 
 // A double-quoted literal, a decimal, or an integer — matched left to right.
-const TOKEN_RE = /"(?:[^"\\]|\\.)*"|\d+\.\d+|\d+/g;
+const TOKEN_RE =
+  /"(?:[^"\\]|\\.)*"|(?<![A-Za-z0-9])\d+\.\d+(?![A-Za-z0-9])|(?<![A-Za-z0-9])\d+(?![A-Za-z0-9])/g;
 
 // Cucumber Expression special characters that must be backslash-escaped in literal text.
 function escapeCucumberLiteral(text: string): string {

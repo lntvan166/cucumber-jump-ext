@@ -28,6 +28,18 @@ describe('inferPattern', () => {
     expect(r.goRegex).toBe('^the \\(admin\\) user$');
     expect(r.paramTypes).toEqual([]);
   });
+
+  it('does not infer a numeric param from digits embedded in a word', () => {
+    const r = inferPattern('the oauth2 token is valid');
+    expect(r.cucumber).toBe('the oauth2 token is valid');
+    expect(r.paramTypes).toEqual([]);
+  });
+
+  it('still infers a numeric param for standalone numbers', () => {
+    const r = inferPattern('user enters 3 codes');
+    expect(r.cucumber).toBe('user enters {int} codes');
+    expect(r.paramTypes).toEqual(['int']);
+  });
 });
 
 describe('identifier helpers', () => {
