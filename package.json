@@ -139,8 +139,8 @@
         },
         "cucumberJump.diagnosticsEnabled": {
           "type": "boolean",
-          "default": false,
-          "markdownDescription": "Show a **warning** (yellow squiggle) on `.feature` steps that have no matching step definition. Only applies when a project/library matches the feature and at least one step file is found — unconfigured or mis-globbed features are never flagged. Use the **Create step definition** quick-fix (lightbulb) to generate a stub."
+          "default": true,
+          "markdownDescription": "When **true** (default), show a **warning** (yellow squiggle) on `.feature` steps that have no matching step definition. Only applies when a project/library matches the feature and at least one step file is found — unconfigured or mis-globbed features are never flagged. Use the **Create step definition** quick-fix (lightbulb / `Cmd`+`.`) to generate a stub. Set **false** to turn the warnings off."
         }
       }
     },

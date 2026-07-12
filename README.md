@@ -345,13 +345,15 @@ Highlighting for `.feature` files comes from your **Gherkin / Cucumber** extensi
 
 ## Authoring: create missing steps
 
-Turn on `cucumberJump.diagnosticsEnabled` to get a warning squiggle on any
-`.feature` step that has no matching step definition. Squiggles appear only when
-a project/library matches the feature and at least one step file exists, so
-unconfigured features stay clean.
+A warning squiggle appears on any `.feature` step that has no matching step
+definition (on by default — set `cucumberJump.diagnosticsEnabled: false` to turn
+it off). Squiggles appear only when a project/library matches the feature and at
+least one step file exists, so unconfigured features stay clean, and Scenario
+Outline `<placeholder>` steps are never flagged.
 
-On a squiggled step, use the lightbulb (or **Cucumber Jump: Create step
-definition** from the command palette) to generate a stub in the right language.
+On a squiggled step, use the lightbulb or **`Cmd`+`.`** (or **Cucumber Jump:
+Create step definition** from the command palette) to generate a stub in the
+right language.
 Quoted values become `{string}`, integers `{int}`, and decimals `{float}`
 (Go stubs use an anchored regex). You pick which step file receives the stub, or
 create a new one.
