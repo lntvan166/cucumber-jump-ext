@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """
-Cucumber Jump 2.1.0 manual-test seeder.
+Cucumber Jump 2.2.0 manual-test seeder.
 
 Creates a throwaway multi-language workspace that exercises every resolution
-path of the extension — all 9 languages, the legacy Go bddFile path, and the
-specific 2.1.0 review fixes (string-literal escapes, C# verbatim strings,
-*.steps.ts / {js,ts} globs, reverse-navigation anchoring, the anonymous {}
-parameter, Dev mode from non-Go step files, loud diagnostics for undetectable
-globs). A TESTPLAN.md checklist is written into the workspace root.
+path of the extension — all 9 languages, the legacy Go bddFile path, the
+2.1.0 review fixes (string-literal escapes, C# verbatim strings, *.steps.ts /
+{js,ts} globs, reverse-navigation anchoring, the anonymous {} parameter, Dev
+mode from non-Go step files, loud diagnostics for undetectable globs), and the
+2.2.0 authoring feature: missing-step diagnostics (opt-in squiggles) + the
+"Create step definition" quick-fix. Each language feature file carries an
+"Authoring" scenario with a mix of matched and unmatched steps, and the Java
+file adds a Scenario Outline to prove <placeholder> steps are never flagged.
+A TESTPLAN.md checklist is written into the workspace root.
 
   python3 manual-test-seed.py                 # seed  ~/cucumber-jump-manual-test
   python3 manual-test-seed.py /path/to/ws     # seed a custom workspace dir
@@ -40,6 +44,7 @@ if CLEAN:
 SETTINGS = {
     "cucumberJump.codeLensEnabled": True,
     "cucumberJump.statusBarHintEnabled": True,
+    "cucumberJump.diagnosticsEnabled": True,
     "cucumberJump.projects": [
         {
             "name": "go-legacy",
@@ -98,6 +103,10 @@ func seeDashboard(state *State) error {
   Scenario: Manage items
     When I add 3 items to the cart
     And I remove 1 item from the cart
+
+  Scenario: Authoring — missing Go step (regex quick-fix)
+    When I add 3 items to the cart
+    Then the cart total is 42 dollars
 ''',
     "go-new/steps/cart_steps.go": r'''package steps
 
@@ -125,6 +134,18 @@ func removeItems(ctx context.Context, n int) error {
     Then I see "OK" on the screen
     And the user logs in
     And the user logs in to admin
+
+  Scenario: Authoring — missing step (Java class-based quick-fix)
+    Given I have 3 orders
+    Then I receive "a receipt" for 2 items
+
+  Scenario Outline: Authoring — outline placeholder steps are never flagged
+    Given I have <count> orders
+    When I fulfil <count> shipments
+
+    Examples:
+      | count |
+      | 3     |
 ''',
     "java/steps/OrderSteps.java": r'''package steps;
 
@@ -152,6 +173,10 @@ public class OrderSteps {
 
   Scenario: Health check
     Given the kotlin service is running
+
+  Scenario: Authoring — missing step (Kotlin quick-fix)
+    Given the kotlin service is running
+    Then the metrics endpoint returns 200
 ''',
     "kotlin/steps/ServiceSteps.kt": '''class ServiceSteps {
 
@@ -167,6 +192,11 @@ public class OrderSteps {
     Given we have behave installed
     When the config is 'strict'
     Then I see the report
+
+  Scenario: Authoring — missing steps (Python decorator quick-fix)
+    Given we have behave installed
+    When the user submits "admin" with 3 retries
+    Then the welcome banner is shown
 """,
     "python/steps/config_steps.py": r"""from behave import given, when, then
 
@@ -193,6 +223,11 @@ def step_report(context):
     And I open the checkout page again
     When I apply coupon SAVE20
     Then I see 2 shiny things in the cart
+
+  Scenario: Authoring — missing step (TypeScript quick-fix)
+    Given I open the checkout page
+    When I select "express" shipping for 2 boxes
+    Then the estimate updates
 ''',
     "ts/steps/checkout.steps.ts": r'''import { Given, When, Then } from '@cucumber/cucumber';
 
@@ -211,6 +246,10 @@ Then('I see {} in the cart', async function (stuff: string) {
   Scenario: View my profile
     Given I visit the profile page
     Then my name is "Tu Van"
+
+  Scenario: Authoring — missing step (JavaScript quick-fix)
+    Given I visit the profile page
+    Then I update my bio to "hello world"
 ''',
     "js/steps/profile.js": '''const { Given, Then } = require('@cucumber/cucumber');
 
@@ -226,6 +265,10 @@ Then('my name is {string}', async function (name) {
   Scenario: Browse
     Given the ruby app is running
     When I visit "home"
+
+  Scenario: Authoring — missing step (Ruby quick-fix)
+    Given the ruby app is running
+    When I search for "widgets" 5 times
 ''',
     "ruby/step_definitions/visit_steps.rb": '''Given('the ruby app is running') do
 end
@@ -240,6 +283,10 @@ end
     Given I have 4 items
     When I say "hello"
     Then checkout is complete
+
+  Scenario: Authoring — missing step (C# class-based quick-fix)
+    Given I have 4 items
+    Then I refund 2 orders with note "done"
 ''',
     "csharp/Steps/ItemSteps.cs": r'''namespace Steps;
 
@@ -268,6 +315,10 @@ public class ItemSteps
   Scenario: Tap around
     Given the app is launched
     When I tap 5 times
+
+  Scenario: Authoring — missing step (Dart quick-fix)
+    Given the app is launched
+    When I scroll 3 times to "settings"
 ''',
     "dart/steps/app_steps.dart": '''import 'package:flutter_gherkin/flutter_gherkin.dart';
 
@@ -286,12 +337,36 @@ when1<int>('I tap {int} times', (count, context) async {
     "broken/steps/notes.txt": "This project's stepsGlob (broken/steps/**) has no file extension on purpose.\n",
 }
 
-TESTPLAN = """# Cucumber Jump 2.1.0 — manual test plan
+TESTPLAN = """# Cucumber Jump 2.2.0 — manual test plan
 
 Open this folder in VS Code/Cursor with the extension installed
-(`cursor --install-extension cucumber-jump-ext-2.1.0.vsix`) or via the
-Extension Development Host. CodeLens + status bar hint are pre-enabled in
-`.vscode/settings.json`. Work top to bottom; every row should pass.
+(`cursor --install-extension cucumber-jump-ext-2.2.0.vsix`) or via the
+Extension Development Host. CodeLens, status-bar hint, and **missing-step
+diagnostics** are pre-enabled in `.vscode/settings.json`. Work top to bottom;
+every row should pass.
+
+## NEW in 2.2.0 — missing-step diagnostics + Create-step quick-fix
+
+`cucumberJump.diagnosticsEnabled` is pre-enabled. Unmatched `.feature` steps
+get a yellow squiggle ("No matching step definition", hover shows source
+"Cucumber Jump"); matched steps and Scenario Outline `<placeholder>` steps do
+NOT. The lightbulb on a squiggled step offers "Cucumber Jump: Create step
+definition". (If the other Cucumber extensions in this editor draw their own
+squiggles, disable them per-workspace for a clean read.)
+
+| # | File / action | Expect |
+|---|---|---|
+| D1 | python/config.feature "Authoring" scenario | `the user submits "admin" with 3 retries` and `the welcome banner is shown` squiggled; `we have behave installed` NOT squiggled |
+| D2 | python — lightbulb on `the user submits "admin" with 3 retries` → Create step definition → pick config_steps.py | appends `@when('the user submits {string} with {int} retries')` + `def ...(context, arg1, arg2)`; file opens, cursor in body; save → squiggle clears |
+| D3 | java/orders.feature Scenario Outline (`I have <count> orders`, `I fulfil <count> shipments`) | NEITHER squiggled — placeholder guard — even though `I fulfil …` has no definition |
+| D4 | java — lightbulb on `I receive "a receipt" for 2 items` → New file… (accept path) | new `.java` file: `public class … { @Then("I receive {string} for {int} items") public void … { throw new io.cucumber.java.PendingException(); } }` — method INSIDE the class, NO marker |
+| D5 | java — same step → pick existing OrderSteps.java | appended stub is prefixed with `// TODO(Cucumber Jump): move this method inside your step-definition class` |
+| D6 | go-new/cart.feature — `the cart total is 42 dollars` → quick-fix | Go handler `func …(arg1 int) error { return godog.ErrPending }` + `//   ctx.Step(\\`^the cart total is (\\d+) dollars$\\`, …)` hint — anchored regex, NOT a cucumber expression |
+| D7 | ts/checkout.feature — `I select "express" shipping for 2 boxes` → quick-fix | `When('I select {string} shipping for {int} boxes', function (arg1: string, arg2: number) {…})` — typed params for `.ts` |
+| D8 | csharp/items.feature — `I refund 2 orders with note "done"` → quick-fix | `[When("I refund {int} orders with note {string}")] public void IRefundOrdersWithNote(int arg1, string arg2)` |
+| D9 | kotlin `the metrics endpoint returns 200`, ruby `I search for "widgets" 5 times`, js `I update my bio to "hello world"`, dart `I scroll 3 times to "settings"` | each squiggles; quick-fix stubs are language-idiomatic (Kotlin `fun`, Ruby `do \\|arg1, arg2\\|`, JS untyped, Dart `whenN<…>` with arity suffix) |
+| D10 | broken/broken.feature | NO squiggles — undetectable adapter → not eligible; diagnostics never fire on a misconfigured project |
+| D11 | Settings → turn `cucumberJump.diagnosticsEnabled` OFF | squiggles on the active editor clear |
 
 ## Forward navigation (.feature → step definition)
 
@@ -384,12 +459,13 @@ def main() -> None:
 
     print(f"Seeded {len(FILES) + 2} files into {WS}")
     print(f"  - cucumberJump.projects: {'OMITTED (zero-setup mode)' if NO_CONFIG else '11 projects'}")
-    print(f"  - TESTPLAN.md with the 36-point manual checklist")
+    print(f"  - cucumberJump.diagnosticsEnabled: true (2.2.0 authoring feature)")
+    print(f"  - TESTPLAN.md: D1-D11 (2.2.0 diagnostics/quick-fix) + the full navigation/dev-mode/zero-setup checklist")
     print()
     print("Next:")
-    print(f"  1. cursor --install-extension cucumber-jump-ext-2.1.0.vsix   (or use the Extension Dev Host)")
+    print(f"  1. cursor --install-extension cucumber-jump-ext-2.2.0.vsix   (or use the Extension Dev Host)")
     print(f"  2. cursor {WS}")
-    print(f"  3. Walk {os.path.join(WS, 'TESTPLAN.md')} top to bottom")
+    print(f"  3. Walk {os.path.join(WS, 'TESTPLAN.md')} top to bottom (start with the NEW 2.2.0 section)")
 
 
 main()
