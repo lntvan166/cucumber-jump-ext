@@ -193,6 +193,10 @@
       {
         "command": "cucumberJump.devModeStatusBarAction",
         "title": "Cucumber Jump: Dev mode actions…"
+      },
+      {
+        "command": "cucumberJump.createStepDefinition",
+        "title": "Cucumber Jump: Create step definition"
       }
     ],
     "keybindings": [
