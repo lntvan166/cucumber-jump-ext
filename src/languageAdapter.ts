@@ -1,3 +1,5 @@
+import type { StepKeyword } from './featureParser';
+
 export type StepDefinition = {
   pattern: string;
   patternLine: number;
@@ -8,11 +10,24 @@ export type StepDefinition = {
   bodyEndLine?: number;
 };
 
+export interface StubRenderInput {
+  keyword: StepKeyword;
+  stepBody: string;
+  ext: string;
+}
+
+export interface StepStubTemplate {
+  isClassBased: boolean;
+  render(input: StubRenderInput): string;
+}
+
 export interface LanguageAdapter {
   parseStepDefinitions(content: string): StepDefinition[];
   matchesStep(def: StepDefinition, rawStep: string, normalizedStep: string): boolean;
   /** Regex for reverse navigation, or undefined when normalized equality suffices. */
   reverseRegexForPattern(pattern: string): string | undefined;
+  /** Optional stub generator. Absent => the "Create step definition" quick-fix is not offered. */
+  stubTemplate?: StepStubTemplate;
 }
 
 export function findDefinitionAtPosition(

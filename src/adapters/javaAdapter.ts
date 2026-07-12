@@ -1,5 +1,6 @@
 import { StepDefinition, LanguageAdapter } from '../languageAdapter';
 import { defaultStepMatches, defaultReverseRegex, unescapeStringLiteral } from './stepMatch';
+import { inferPattern, deriveIdentifierWords, toSnake, type StubParamType } from '../stepStubber';
 
 const ANNOTATION_REGEX = /^\s*@(Given|When|Then|And|But)\s*\(\s*"((?:[^"\\]|\\.)*)"\s*\)/;
 const METHOD_REGEX = /(?:public|private|protected|override\s+)*(?:void|fun|\w+)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
@@ -54,4 +55,32 @@ export const javaAdapter: LanguageAdapter = {
     return defaultStepMatches(def.pattern, rawStep, normalizedStep);
   },
   reverseRegexForPattern: defaultReverseRegex,
+  stubTemplate: {
+    isClassBased: true,
+    render({ keyword, stepBody, ext }) {
+      const { cucumber, paramTypes } = inferPattern(stepBody);
+      const name = toSnake(deriveIdentifierWords(stepBody));
+      const pattern = cucumber.replace(/"/g, '\\"');
+      const annotation = `@${keyword}("${pattern}")`;
+      const isKotlin = ext === 'kt' || ext === 'kts';
+      if (isKotlin) {
+        const ktType = (t: StubParamType) => (t === 'string' ? 'String' : t === 'int' ? 'Int' : 'Float');
+        const params = paramTypes.map((t, i) => `arg${i + 1}: ${ktType(t)}`).join(', ');
+        return [
+          annotation,
+          `fun ${name}(${params}) {`,
+          '    throw io.cucumber.java.PendingException()',
+          '}',
+        ].join('\n');
+      }
+      const javaType = (t: StubParamType) => (t === 'string' ? 'String' : t === 'int' ? 'int' : 'float');
+      const params = paramTypes.map((t, i) => `${javaType(t)} arg${i + 1}`).join(', ');
+      return [
+        annotation,
+        `public void ${name}(${params}) {`,
+        '    throw new io.cucumber.java.PendingException();',
+        '}',
+      ].join('\n');
+    },
+  },
 };
