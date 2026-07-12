@@ -569,6 +569,13 @@ export async function findUnmatchedSteps(
     if (!stepText) {
       continue;
     }
+    // Scenario Outline template steps carry `<placeholder>` tokens (e.g. "I have
+    // <count> cucumbers") that are substituted from the Examples table at run time,
+    // so they never literally match a concrete step pattern/definition. Skip them
+    // rather than flag them as missing.
+    if (/<[^>]+>/.test(stepText)) {
+      continue;
+    }
     const norm = normalizeStepText(stepText);
     if (!matchers.some((m) => m(stepText, norm))) {
       unmatchedLines.push(i);
